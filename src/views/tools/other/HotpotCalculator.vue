@@ -11,7 +11,7 @@ function subDiners() {
 }
 
 // ── 折扣 ─────────────────────────────────────
-const discount = ref<0.75 | 0.68>(0.75)
+const discount = ref<0.75 | 0.68>(0.68)
 
 // ── 菜品 ─────────────────────────────────────
 interface Dish {
@@ -34,6 +34,47 @@ const dishes = ref<Dish[]>([
 function add(d: Dish) { if (d.count < 99) d.count++ }
 function sub(d: Dish) { if (d.count > 0) d.count-- }
 
+// ── 饮料 ─────────────────────────────────────
+interface Drink {
+  key: string
+  name: string
+  price: number
+  count: number
+}
+
+const drinks = ref<Drink[]>([
+  { key: 'glass-bottle',  name: '玻璃瓶',   price: 3,  count: 0 },
+  { key: 'cola',          name: '可乐雪芬', price: 5,  count: 0 },
+  { key: 'wanglaoji',     name: '王老吉',   price: 6,  count: 0 },
+  { key: 'jianlibao',     name: '健力宝',   price: 6,  count: 0 },
+  { key: 'guava',         name: '番石榴',   price: 6,  count: 0 },
+  { key: 'vita-tea',      name: '维他茶',   price: 6,  count: 0 },
+  { key: 'podu',          name: '破独',     price: 6,  count: 0 },
+  { key: 'soy-milk',      name: '豆奶',     price: 7,  count: 0 },
+  { key: 'coconut-water', name: '椰子水',   price: 7,  count: 0 },
+  { key: 'oolong',        name: '乌龙茶',   price: 7,  count: 0 },
+  { key: 'hopwater',      name: '好望水',   price: 7,  count: 0 },
+  { key: 'small-coconut', name: '小椰汁',   price: 7,  count: 0 },
+  { key: 'songyouzhi',    name: '宋柚汁',   price: 8,  count: 0 },
+  { key: 'beiqiyecai',    name: '贝奇野菜', price: 8,  count: 0 },
+  { key: 'xianguofengmi', name: '鲜果蜂蜜水', price: 8,  count: 0 },
+  { key: 'budweiser',     name: '百威',     price: 8,  count: 0 },
+  { key: 'jiashibo',      name: '嘉士伯',   price: 8,  count: 0 },
+  { key: 'zhaori',        name: '朝日',     price: 10,  count: 0 },
+  { key: 'heineken',      name: '喜力',     price: 10, count: 0 },
+  { key: 'corona',        name: '科罗娜',   price: 10, count: 0 },
+  { key: 'hoegaarden',    name: '福佳白',   price: 10, count: 0 },
+  { key: 'blue-girl',     name: '蓝妹',     price: 10, count: 0 },
+  { key: 'big-coconut',   name: '大椰汁',   price: 20, count: 0 },
+])
+
+function addDrink(d: Drink) { if (d.count < 99) d.count++ }
+function subDrink(d: Drink) { if (d.count > 0) d.count-- }
+
+const drinkExpanded = ref(false)
+const visibleDrinks = computed(() => drinkExpanded.value ? drinks.value : drinks.value.slice(0, 2))
+const hiddenDrinkCount = computed(() => drinks.value.length - 2)
+
 // ── 结算 ─────────────────────────────────────
 const showBill = ref(false)
 
@@ -42,8 +83,10 @@ const potFee = computed(() => diners.value * 12)
 const sauceFee = computed(() => diners.value * 4)
 const dishRaw = computed(() => dishes.value.reduce((s, d) => s + d.price * d.count, 0))
 const dishFee = computed(() => Math.round(dishRaw.value * discount.value * 100) / 100)
-const total = computed(() => potFee.value + sauceFee.value + dishFee.value)
+const drinkTotal = computed(() => drinks.value.reduce((s, d) => s + d.price * d.count, 0))
+const total = computed(() => potFee.value + sauceFee.value + dishFee.value + drinkTotal.value)
 const hasDishes = computed(() => dishes.value.some((d) => d.count > 0))
+const hasDrinks = computed(() => drinks.value.some((d) => d.count > 0))
 const discountText = computed(() => discount.value === 0.75 ? '7.5折' : '会员6.8折')
 </script>
 
@@ -110,6 +153,28 @@ const discountText = computed(() => discount.value === 0.75 ? '7.5折' : '会员
       </div>
     </section>
 
+    <!-- 饮料选择 -->
+    <section class="card">
+      <div class="card-title">🥤 饮料选择</div>
+      <div class="drink-grid">
+        <div v-for="d in visibleDrinks" :key="d.key" class="drink-item">
+          <div class="drink-info">
+            <span class="drink-name">{{ d.name }}</span>
+            <span class="drink-price">¥{{ d.price }}</span>
+          </div>
+          <div class="stepper tiny">
+            <button class="st-btn xs" :disabled="d.count <= 0" @click="subDrink(d)">−</button>
+            <span class="st-num xs">{{ d.count }}</span>
+            <button class="st-btn xs" :disabled="d.count >= 99" @click="addDrink(d)">+</button>
+          </div>
+        </div>
+      </div>
+      <button class="expand-btn" @click="drinkExpanded = !drinkExpanded">
+        <span v-if="!drinkExpanded">展开全部 ({{ hiddenDrinkCount }}+) ▼</span>
+        <span v-else>收起 ▲</span>
+      </button>
+    </section>
+
     <!-- 结算按钮 -->
     <button v-if="!showBill" class="settle-btn" @click="showBill = true">
       <span class="settle-icon">💰</span>
@@ -149,6 +214,20 @@ const discountText = computed(() => discount.value === 0.75 ? '7.5折' : '会员
         </div>
       </template>
       <div v-else class="empty-dish">暂未选择菜品</div>
+
+      <template v-if="hasDrinks">
+        <div class="sep" />
+        <div v-for="d in drinks.filter(x => x.count > 0)" :key="d.key" class="bill-row sub">
+          <span class="bl"><span class="dot" style="background: #3b82f6" />{{ d.name }}</span>
+          <span class="bd">{{ d.count }}瓶 × ¥{{ d.price }}</span>
+          <span class="ba">¥{{ d.count * d.price }}</span>
+        </div>
+        <div class="bill-row highlight">
+          <span class="bl">🥤 饮料费</span>
+          <span class="bd"></span>
+          <span class="ba hi-drink">¥{{ drinkTotal }}</span>
+        </div>
+      </template>
 
       <div class="sep thick" />
 
@@ -437,6 +516,103 @@ const discountText = computed(() => discount.value === 0.75 ? '7.5折' : '会员
   padding-right: 4px;
 }
 
+/* ── 饮料列表 ──────────────────────────────── */
+.drink-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.drink-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(6px, 1.5vw, 10px) clamp(8px, 2vw, 12px);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: #f8fafc;
+  transition: box-shadow 0.15s;
+}
+
+.drink-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.drink-name {
+  font-size: clamp(12px, 3vw, 14px);
+  font-weight: 600;
+  color: var(--text-1);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drink-price {
+  font-size: clamp(11px, 2.5vw, 12px);
+  font-family: var(--mono);
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+.expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 8px;
+  padding: clamp(6px, 1.5vw, 8px) 0;
+  border: 1.5px dashed var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: clamp(12px, 2.8vw, 13px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.expand-btn:hover {
+  color: var(--text-2);
+  border-color: var(--text-3);
+}
+
+.expand-btn:active {
+  transform: scale(0.97);
+}
+
+/* Stepper tiny（饮料用） */
+.stepper.tiny {
+  border: 1.5px solid var(--line);
+  background: #f1f5f9;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.st-btn.xs {
+  width: clamp(24px, 6vw, 30px);
+  height: clamp(22px, 5.5vw, 28px);
+  font-size: clamp(13px, 3.2vw, 16px);
+  color: #3b82f6;
+}
+
+.st-btn.xs:active:not(:disabled) {
+  background: #bfdbfe;
+}
+
+.st-num.xs {
+  min-width: clamp(18px, 4.5vw, 24px);
+  font-size: clamp(12px, 3vw, 15px);
+  color: #3b82f6;
+}
+
+.ba.hi-drink {
+  color: #3b82f6;
+}
+
 /* ── 结算按钮 ──────────────────────────────── */
 .settle-btn {
   display: flex;
@@ -620,8 +796,8 @@ const discountText = computed(() => discount.value === 0.75 ? '7.5折' : '会员
   letter-spacing: -1px;
 }
 
-/* ── 深色模式 ──────────────────────────────── */
-@media (prefers-color-scheme: dark) {
+/* ── 深色模式（仅桌面端） ─────────────────── */
+@media (prefers-color-scheme: dark) and (min-width: 768px) {
   .page {
     --red-light: #1a1215;
     --card-bg: #1e1a1f;
@@ -651,6 +827,46 @@ const discountText = computed(() => discount.value === 0.75 ? '7.5折' : '会员
 
   .fold-btn:hover {
     background: rgba(255, 255, 255, 0.06);
+  }
+
+  .drink-item {
+    background: var(--card-bg) !important;
+    border-color: var(--line);
+  }
+
+  .expand-btn {
+    border-color: var(--line);
+    color: var(--text-3);
+  }
+
+  .expand-btn:hover {
+    color: var(--text-2);
+    border-color: var(--text-2);
+  }
+
+  .drink-price {
+    color: #60a5fa;
+  }
+
+  .stepper.tiny {
+    border-color: var(--line);
+    background: #1e293b;
+  }
+
+  .st-btn.xs {
+    color: #60a5fa;
+  }
+
+  .st-btn.xs:active:not(:disabled) {
+    background: #1e3a5f;
+  }
+
+  .st-num.xs {
+    color: #60a5fa;
+  }
+
+  .ba.hi-drink {
+    color: #60a5fa;
   }
 }
 </style>
