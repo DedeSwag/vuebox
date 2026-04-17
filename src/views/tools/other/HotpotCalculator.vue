@@ -11,7 +11,7 @@ function subDiners() {
 }
 
 // ── 折扣 ─────────────────────────────────────
-const discount = ref<0.75 | 0.68>(0.68)
+const discount = ref<0.68 | 0.58>(0.68)
 
 // ── 菜品 ─────────────────────────────────────
 interface Dish {
@@ -87,7 +87,7 @@ const drinkTotal = computed(() => drinks.value.reduce((s, d) => s + d.price * d.
 const total = computed(() => potFee.value + sauceFee.value + dishFee.value + drinkTotal.value)
 const hasDishes = computed(() => dishes.value.some((d) => d.count > 0))
 const hasDrinks = computed(() => drinks.value.some((d) => d.count > 0))
-const discountText = computed(() => discount.value === 0.75 ? '7.5折' : '会员6.8折')
+const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '5.8折')
 </script>
 
 <template>
@@ -116,16 +116,16 @@ const discountText = computed(() => discount.value === 0.75 ? '7.5折' : '会员
     <section class="card">
       <div class="card-title">🏷️ 折扣选择</div>
       <div class="discount-row">
-        <label class="dc" :class="{ active: discount === 0.75 }">
-          <input type="radio" :value="0.75" v-model="discount" />
-          <div class="dc-inner">
-            <span class="dc-num">7.5<small>折</small></span>
-          </div>
-        </label>
-        <label class="dc vip" :class="{ active: discount === 0.68 }">
+        <label class="dc" :class="{ active: discount === 0.68 }">
           <input type="radio" :value="0.68" v-model="discount" />
           <div class="dc-inner">
             <span class="dc-num">6.8<small>折</small></span>
+          </div>
+        </label>
+        <label class="dc vip" :class="{ active: discount === 0.58 }">
+          <input type="radio" :value="0.58" v-model="discount" />
+          <div class="dc-inner">
+            <span class="dc-num">5.8<small>折</small></span>
           </div>
         </label>
       </div>

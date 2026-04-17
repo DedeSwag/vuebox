@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => {
     // 部署到子路径时修改 .env.production 中的 VITE_BASE，例如: VITE_BASE=/toolbox/
     base: env.VITE_BASE || '/',
     plugins: [vue()],
+    server: {
+      port: 3000
+    },
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
