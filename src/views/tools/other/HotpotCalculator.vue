@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import brandImg from '@/assets/zhufugui.png'
 
 // ── 用餐人数 ─────────────────────────────────
 const diners = ref(2)
@@ -12,6 +13,10 @@ function subDiners() {
 
 // ── 折扣 ─────────────────────────────────────
 const discount = ref<0.68 | 0.58>(0.68)
+const discountOptions = [
+  { value: 0.68, label: '6.8折' },
+  { value: 0.58, label: '5.8折' },
+] as const
 
 // ── 菜品 ─────────────────────────────────────
 interface Dish {
@@ -30,6 +35,11 @@ const dishes = ref<Dish[]>([
   { key: 'yellow', name: '黄盘', price: 10, color: '#ca8a04', bg: '#fefce8', border: '#fde047', count: 0 },
   { key: 'green',  name: '绿盘', price: 5,  color: '#16a34a', bg: '#f0fdf4', border: '#86efac', count: 0 },
 ])
+
+/** 折后单价 */
+function discountedPrice(price: number) {
+  return Math.round(price * discount.value * 100) / 100
+}
 
 function add(d: Dish) { if (d.count < 99) d.count++ }
 function sub(d: Dish) { if (d.count > 0) d.count-- }
@@ -87,16 +97,14 @@ const drinkTotal = computed(() => drinks.value.reduce((s, d) => s + d.price * d.
 const total = computed(() => potFee.value + sauceFee.value + dishFee.value + drinkTotal.value)
 const hasDishes = computed(() => dishes.value.some((d) => d.count > 0))
 const hasDrinks = computed(() => drinks.value.some((d) => d.count > 0))
-const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '5.8折')
+const discountText = computed(() => discount.value === 0.68 ? '6.8折' : '5.8折')
 </script>
 
 <template>
   <div class="page">
-    <!-- 标题 -->
+    <!-- 商标 -->
     <header class="header">
-      <span class="logo">🍲</span>
-      <h1>朱富贵火锅</h1>
-      <p class="subtitle">菜价计算器</p>
+      <img :src="brandImg" alt="朱富贵火锅" class="brand-img" />
     </header>
 
     <!-- 用餐人数 -->
@@ -112,28 +120,16 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
       </div>
     </section>
 
-    <!-- 折扣选择 -->
+    <!-- 菜品选择（含折扣下拉） -->
     <section class="card">
-      <div class="card-title">🏷️ 折扣选择</div>
-      <div class="discount-row">
-        <label class="dc" :class="{ active: discount === 0.68 }">
-          <input type="radio" :value="0.68" v-model="discount" />
-          <div class="dc-inner">
-            <span class="dc-num">6.8<small>折</small></span>
-          </div>
-        </label>
-        <label class="dc vip" :class="{ active: discount === 0.58 }">
-          <input type="radio" :value="0.58" v-model="discount" />
-          <div class="dc-inner">
-            <span class="dc-num">5.8<small>折</small></span>
-          </div>
-        </label>
+      <div class="card-head">
+        <span class="card-title" style="margin-bottom:0">🍽️ 选择菜品</span>
+        <div class="discount-select-wrap">
+          <select v-model.number="discount" class="discount-select">
+            <option v-for="o in discountOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+          </select>
+        </div>
       </div>
-    </section>
-
-    <!-- 菜品选择 -->
-    <section class="card">
-      <div class="card-title">🍽️ 选择菜品</div>
       <div class="dish-list">
         <div
           v-for="d in dishes"
@@ -142,8 +138,13 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
           :style="{ '--c': d.color, '--dbg': d.bg, '--dbc': d.border }"
         >
           <span class="dish-dot" />
-          <span class="dish-name">{{ d.name }}</span>
-          <span class="dish-price">¥{{ d.price }}</span>
+          <div class="dish-meta">
+            <span class="dish-name">{{ d.name }}</span>
+            <span class="dish-prices">
+              <span class="dish-price-original">¥{{ d.price }}</span>
+              <span class="dish-price-final">¥{{ discountedPrice(d.price) }}</span>
+            </span>
+          </div>
           <div class="stepper mini">
             <button class="st-btn sm" :disabled="d.count <= 0" @click="sub(d)">−</button>
             <span class="st-num sm">{{ d.count }}</span>
@@ -242,19 +243,19 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
 <style scoped>
 /* ── 页面 & 主题变量 ───────────────────────── */
 .page {
-  --red: #E53E3E;
-  --red-light: #FFF5F5;
-  --red-border: #FEB2B2;
+  --red: #a01d25;
+  --red-light: #faf0d7;
+  --red-border: #d4a373;
   --gold: #D69E2E;
   --gold-bg: #FFFFF0;
   --gold-border: #F6E05E;
-  --card-bg: #fff;
-  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  --text-1: #1a202c;
-  --text-2: #718096;
-  --text-3: #a0aec0;
-  --line: #e2e8f0;
-  --radius: 16px;
+  --card-bg: #fffdf7;
+  --card-shadow: 0 2px 12px rgba(160, 29, 37, 0.08);
+  --text-1: #2d1a1a;
+  --text-2: #6b5050;
+  --text-3: #a08a7a;
+  --line: #e8d9c5;
+  --radius: 14px;
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
 
@@ -266,36 +267,24 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
   color: var(--text-1);
   max-width: 480px;
   margin: 0 auto;
-  padding: clamp(12px, 3vw, 20px);
+  padding: clamp(10px, 2.5vw, 16px);
   padding-bottom: env(safe-area-inset-bottom, 16px);
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── 标题 ──────────────────────────────────── */
+/* ── 商标头部 ──────────────────────────────── */
 .header {
   text-align: center;
-  padding: clamp(10px, 2.5vw, 18px) 0 clamp(6px, 1.5vw, 12px);
+  padding: clamp(6px, 1.5vw, 10px) 0;
 }
 
-.logo {
-  font-size: clamp(32px, 8vw, 44px);
+.brand-img {
+  width: min(70%, 280px);
+  height: auto;
   display: block;
-  line-height: 1.1;
-}
-
-.header h1 {
-  font-size: clamp(20px, 5.5vw, 26px);
-  font-weight: 800;
-  margin: 4px 0 0;
-  color: var(--red);
-  letter-spacing: -0.5px;
-}
-
-.subtitle {
-  font-size: clamp(12px, 3vw, 14px);
-  color: var(--text-2);
-  margin: 2px 0 0;
+  margin: 0 auto;
+  object-fit: contain;
 }
 
 /* ── 卡片通用 ──────────────────────────────── */
@@ -303,22 +292,57 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
   background: var(--card-bg);
   border-radius: var(--radius);
   box-shadow: var(--card-shadow);
-  padding: clamp(14px, 3.5vw, 20px);
-  margin-bottom: clamp(10px, 2.5vw, 14px);
+  padding: clamp(12px, 3vw, 18px);
+  margin-bottom: clamp(8px, 2vw, 12px);
 }
 
 .card-title {
-  font-size: clamp(14px, 3.5vw, 16px);
+  font-size: clamp(13px, 3.3vw, 15px);
   font-weight: 700;
   color: var(--text-1);
-  margin-bottom: clamp(10px, 2.5vw, 14px);
+  margin-bottom: clamp(8px, 2vw, 12px);
+}
+
+/* ── 菜品卡片头部（含折扣下拉） ─────────── */
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: clamp(8px, 2vw, 12px);
+}
+
+.discount-select-wrap {
+  position: relative;
+}
+
+.discount-select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1.5px solid var(--red-border);
+  border-radius: 8px;
+  background: var(--red-light);
+  color: var(--red);
+  font-size: clamp(12px, 3vw, 14px);
+  font-weight: 700;
+  font-family: var(--mono);
+  padding: 4px 24px 4px 10px;
+  cursor: pointer;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a01d25' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  transition: box-shadow 0.15s;
+}
+
+.discount-select:focus {
+  box-shadow: 0 0 0 2px rgba(160, 29, 37, 0.2);
 }
 
 /* ── 用餐人数 ──────────────────────────────── */
 .diner-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .diner-hint {
@@ -337,14 +361,14 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
 }
 
 .st-btn {
-  width: clamp(36px, 9vw, 42px);
-  height: clamp(34px, 8.5vw, 40px);
+  width: clamp(40px, 10vw, 46px);
+  height: clamp(38px, 9.5vw, 44px);
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   background: transparent;
-  font-size: clamp(16px, 4.5vw, 20px);
+  font-size: clamp(18px, 5vw, 22px);
   font-weight: 700;
   color: var(--red);
   cursor: pointer;
@@ -365,15 +389,15 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
 }
 
 .st-num {
-  min-width: clamp(32px, 8vw, 40px);
+  min-width: clamp(34px, 8.5vw, 42px);
   text-align: center;
-  font-size: clamp(16px, 4.5vw, 20px);
+  font-size: clamp(17px, 4.5vw, 20px);
   font-weight: 800;
   color: var(--text-1);
   font-family: var(--mono);
 }
 
-/* Stepper mini（菜品用） */
+/* Stepper mini（菜品用）── 加大触摸区域 */
 .stepper.mini {
   border-color: var(--dbc);
   background: var(--dbg);
@@ -381,9 +405,9 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
 }
 
 .st-btn.sm {
-  width: clamp(30px, 7.5vw, 36px);
-  height: clamp(28px, 7vw, 34px);
-  font-size: clamp(14px, 3.8vw, 18px);
+  width: clamp(38px, 9.5vw, 44px);
+  height: clamp(36px, 9vw, 42px);
+  font-size: clamp(18px, 4.5vw, 22px);
   color: var(--c);
 }
 
@@ -392,84 +416,9 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
 }
 
 .st-num.sm {
-  min-width: clamp(24px, 6vw, 32px);
-  font-size: clamp(14px, 3.8vw, 18px);
+  min-width: clamp(28px, 7vw, 36px);
+  font-size: clamp(16px, 4vw, 20px);
   color: var(--c);
-}
-
-/* ── 折扣 ──────────────────────────────────── */
-.discount-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.dc {
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.dc input { display: none; }
-
-.dc-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(10px, 2.5vw, 14px) 8px;
-  border: 2px solid var(--line);
-  border-radius: 14px;
-  transition: all 0.18s;
-}
-
-.dc-inner:active {
-  transform: scale(0.96);
-}
-
-.dc-num {
-  font-size: clamp(22px, 5.5vw, 28px);
-  font-weight: 800;
-  font-family: var(--mono);
-  color: var(--text-2);
-  line-height: 1;
-}
-
-.dc-num small {
-  font-size: 0.5em;
-  font-weight: 600;
-  margin-left: 1px;
-}
-
-.dc-note {
-  font-size: clamp(10px, 2.2vw, 11px);
-  color: var(--text-3);
-  margin-top: 4px;
-  transition: color 0.18s;
-}
-
-/* 选中态 */
-.dc.active .dc-inner {
-  border-color: var(--red);
-  background: var(--red-light);
-  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.15);
-}
-
-.dc.active .dc-num {
-  color: var(--red);
-}
-
-.dc.vip.active .dc-inner {
-  border-color: var(--gold);
-  background: var(--gold-bg);
-  box-shadow: 0 0 0 3px rgba(214, 158, 46, 0.15);
-}
-
-.dc.vip.active .dc-num {
-  color: var(--gold);
-}
-
-.dc.vip.active .dc-note {
-  color: var(--gold);
 }
 
 /* ── 菜品列表 ──────────────────────────────── */
@@ -481,18 +430,14 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
 
 .dish {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: clamp(10px, 2.5vw, 14px) clamp(12px, 3vw, 16px);
   border: 1.5px solid var(--dbc);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--dbg);
   transition: box-shadow 0.2s;
-}
-
-.dish:active {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .dish-dot {
@@ -502,18 +447,38 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
   background: var(--c);
 }
 
+.dish-meta {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
 .dish-name {
   font-size: clamp(14px, 3.5vw, 16px);
   font-weight: 700;
   color: var(--c);
 }
 
-.dish-price {
-  font-size: clamp(12px, 3vw, 14px);
+.dish-prices {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dish-price-original {
+  font-size: clamp(11px, 2.6vw, 12px);
   font-family: var(--mono);
-  color: var(--text-2);
-  text-align: right;
-  padding-right: 4px;
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.dish-price-final {
+  font-size: clamp(13px, 3.2vw, 15px);
+  font-family: var(--mono);
+  color: #a01d25;
+  font-weight: 800;
 }
 
 /* ── 饮料列表 ──────────────────────────────── */
@@ -530,7 +495,7 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
   padding: clamp(6px, 1.5vw, 10px) clamp(8px, 2vw, 12px);
   border: 1.5px solid var(--line);
   border-radius: 10px;
-  background: #f8fafc;
+  background: #fdf8ed;
   transition: box-shadow 0.15s;
 }
 
@@ -584,18 +549,18 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
   transform: scale(0.97);
 }
 
-/* Stepper tiny（饮料用） */
+/* Stepper tiny（饮料用）── 加大触摸区域 */
 .stepper.tiny {
   border: 1.5px solid var(--line);
-  background: #f1f5f9;
+  background: #f5edd8;
   border-radius: 8px;
   flex-shrink: 0;
 }
 
 .st-btn.xs {
-  width: clamp(24px, 6vw, 30px);
-  height: clamp(22px, 5.5vw, 28px);
-  font-size: clamp(13px, 3.2vw, 16px);
+  width: clamp(32px, 8vw, 38px);
+  height: clamp(30px, 7.5vw, 36px);
+  font-size: clamp(16px, 4vw, 20px);
   color: #3b82f6;
 }
 
@@ -604,8 +569,8 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
 }
 
 .st-num.xs {
-  min-width: clamp(18px, 4.5vw, 24px);
-  font-size: clamp(12px, 3vw, 15px);
+  min-width: clamp(22px, 5.5vw, 28px);
+  font-size: clamp(14px, 3.5vw, 17px);
   color: #3b82f6;
 }
 
@@ -623,22 +588,22 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
   padding: clamp(14px, 3.5vw, 18px) 20px;
   border: none;
   border-radius: var(--radius);
-  background: linear-gradient(135deg, #ED6A3B, #E8452E);
+  background: linear-gradient(135deg, #c4282f, #a01d25);
   color: #fff;
   cursor: pointer;
-  box-shadow: 0 4px 18px rgba(232, 69, 46, 0.35);
+  box-shadow: 0 4px 18px rgba(160, 29, 37, 0.35);
   transition: transform 0.12s, box-shadow 0.12s;
   -webkit-tap-highlight-color: transparent;
 }
 
 .settle-btn:hover {
-  box-shadow: 0 6px 24px rgba(232, 69, 46, 0.45);
+  box-shadow: 0 6px 24px rgba(160, 29, 37, 0.45);
   transform: translateY(-1px);
 }
 
 .settle-btn:active {
   transform: scale(0.97);
-  box-shadow: 0 2px 10px rgba(232, 69, 46, 0.3);
+  box-shadow: 0 2px 10px rgba(160, 29, 37, 0.3);
 }
 
 .settle-icon {
@@ -651,18 +616,10 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
   letter-spacing: 0.5px;
 }
 
-.settle-price {
-  font-size: clamp(20px, 5vw, 26px);
-  font-weight: 900;
-  font-family: var(--mono);
-  letter-spacing: -0.5px;
-  margin-left: 4px;
-}
-
 /* ── 账单 ──────────────────────────────────── */
 .bill-card {
   animation: billSlideUp 0.28s ease-out;
-  background: linear-gradient(180deg, #fff 0%, var(--red-light) 100%);
+  background: linear-gradient(180deg, var(--card-bg) 0%, var(--red-light) 100%);
   border: 1.5px solid var(--red-border);
 }
 
@@ -799,13 +756,13 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
 /* ── 深色模式（仅桌面端） ─────────────────── */
 @media (prefers-color-scheme: dark) and (min-width: 768px) {
   .page {
-    --red-light: #1a1215;
-    --card-bg: #1e1a1f;
+    --red-light: #1c1510;
+    --card-bg: #221c17;
     --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-    --text-1: #f5f0f0;
-    --text-2: #9b8e8e;
-    --text-3: #6b5e5e;
-    --line: #3d2f2f;
+    --text-1: #f5efe5;
+    --text-2: #9b8e7e;
+    --text-3: #6b5e4e;
+    --line: #3d3228;
     --red-border: #5c2424;
     --gold-bg: #1f1c12;
     --gold-border: #5c4e1a;
@@ -817,12 +774,12 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
   }
 
   .bill-card {
-    background: linear-gradient(180deg, var(--card-bg) 0%, #1a1215 100%);
+    background: linear-gradient(180deg, var(--card-bg) 0%, #1c1510 100%);
   }
 
   .settle-btn {
-    background: linear-gradient(135deg, #c0522e, #b91c1c);
-    box-shadow: 0 4px 18px rgba(185, 28, 28, 0.4);
+    background: linear-gradient(135deg, #b82830, #8a1820);
+    box-shadow: 0 4px 18px rgba(160, 29, 37, 0.4);
   }
 
   .fold-btn:hover {
@@ -850,7 +807,7 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
 
   .stepper.tiny {
     border-color: var(--line);
-    background: #1e293b;
+    background: #2a231a;
   }
 
   .st-btn.xs {
@@ -867,6 +824,21 @@ const discountText = computed(() => discount.value === 0.68 ? '会员6.8折' : '
 
   .ba.hi-drink {
     color: #60a5fa;
+  }
+
+  .discount-select {
+    background-color: #2a1f18;
+    border-color: #5c2424;
+    color: #e8a0a0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e8a0a0' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  }
+
+  .dish-price-original {
+    color: var(--text-3);
+  }
+
+  .dish-price-final {
+    color: #e8a0a0;
   }
 }
 </style>
