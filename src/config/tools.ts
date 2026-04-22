@@ -33,6 +33,19 @@ export const tools: ToolMeta[] = [
     component: () => import('@/views/tools/dev/JsonFormatter.vue'),
   },
 
+  // ── 行程安排 ─────────────────────────────────────────
+  {
+    name: 'trip-schedule-2026',
+    title: '2026五一行程安排',
+    description: '2026年五一假期行程规划，含地图路线与每日详细安排',
+    category: 'schedule',
+    icon: '🗓️',
+    keywords: ['行程', '五一', '旅行', '安排', 'schedule', 'trip'],
+    path: '/schedule/trip-2026',
+    component: () => import('@/views/tools/schedule/TripSchedule.vue'),
+    standalone: true,
+  },
+
   // ── 其他工具 ─────────────────────────────────────────
   {
     name: 'hotpot-calculator',

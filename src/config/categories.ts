@@ -42,6 +42,12 @@ export const categories: ToolCategory[] = [
     description: 'UUID、密码、二维码等生成工具',
   },
   {
+    key: 'schedule',
+    name: '行程安排',
+    icon: '🗓️',
+    description: '旅行行程规划与可视化展示',
+  },
+  {
     key: 'other',
     name: '其他工具',
     icon: '🧩',
