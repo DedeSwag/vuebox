@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import ToolWrapper from '@/components/ToolWrapper.vue'
 import {
   cronFields,
   cronTemplates,
@@ -18,6 +17,7 @@ const format = ref<CronFormat>(6)
 const activeField = ref(1)
 const count = ref(10)
 const copyMessage = ref('')
+const emit = defineEmits<{ notify: [message: string] }>()
 const notice = ref('')
 const dates = ref<string[]>([])
 const previewError = ref('')
@@ -145,9 +145,21 @@ async function copyExpression() {
   try {
     await navigator.clipboard.writeText(value)
     if (value === normalized.value) copyMessage.value = '已复制'
+    emit('notify', '已复制 Cron 表达式')
   } catch {
     copyMessage.value = '复制失败，请选中上方表达式手动复制。'
+    emit('notify', copyMessage.value)
   }
+}
+
+function reset() {
+  expression.value = '0 * * * * *'
+  format.value = 6
+  activeField.value = 1
+  count.value = 10
+  copyMessage.value = notice.value = ''
+  now.value = new Date()
+  emit('notify', '已重置 Cron 表达式生成器')
 }
 
 let worker: Worker | undefined
@@ -219,10 +231,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <ToolWrapper
-    title="Cron 表达式生成器"
-    description="可视化配置执行规则，实时校验并预览下一次运行时间"
-  >
+  <div class="cron-tool">
+    <div class="cron-toolbar"><p>可视化配置执行规则，实时校验并预览下一次运行时间。</p><button @click="reset">重置</button></div>
     <section class="expression-section" aria-labelledby="input-title">
       <div class="section-heading">
         <h2 id="input-title">01 <span>表达式输入</span></h2>
@@ -572,10 +582,13 @@ onBeforeUnmount(() => {
         </p>
       </section>
     </div>
-  </ToolWrapper>
+  </div>
 </template>
 
 <style scoped>
+.cron-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.cron-toolbar button { flex-shrink: 0; padding: 7px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text-h); }
+.cron-toolbar button:hover { border-color: var(--accent-border); color: var(--accent); background: var(--accent-bg); }
 h2 {
   margin: 0;
   font-size: 13px;

@@ -4,17 +4,25 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "test:cron": "node --experimental-strip-types --test tests/cron.test.ts",
-    "test:json": "node --experimental-strip-types --test tests/json.test.ts"
+    "test:url": "node --experimental-strip-types --test tests/url.test.ts",
+    "test:encoding": "node --experimental-strip-types --test tests/encoding.test.ts",
+    "test:json": "node --experimental-strip-types --test tests/json.test.ts",
+    "test:timestamp": "node --experimental-strip-types --test tests/timestamp.test.ts",
+    "test:timezones": "node --experimental-strip-types --test tests/timezones.test.ts"
   },
   "dependencies": {
     "cron-parser": "^5.10.1",
+    "diff": "^9.0.0",
     "jsonc-parser": "^3.3.1",
+    "sql-formatter": "^15.8.2",
     "vue": "^3.5.32",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4.6.4",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@types/node": "^24.12.2",

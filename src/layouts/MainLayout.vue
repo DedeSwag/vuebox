@@ -32,7 +32,18 @@ function goHome() {
     </header>
 
     <!-- 主内容区域 -->
-    <main class="main" :class="{ 'main-wide': route.name === 'json-formatter' }">
+    <main
+      class="main"
+      :class="{
+        'main-wide': [
+          'json-formatter',
+          'text-diff',
+          'sql-formatter',
+          'yaml-converter',
+          'json-types',
+        ].includes(String(route.name)),
+      }"
+    >
       <router-view />
     </main>
 

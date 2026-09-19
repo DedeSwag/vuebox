@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { readFileSync } from 'node:fs'
+import { largeJsonFixture } from './largeJsonFixture.ts'
 import {
   flattenJsonTree,
   treeWindow,
@@ -117,11 +117,8 @@ test('超长和超深文本返回错误，字符串中的括号不计深度', ()
     undefined,
   )
 })
-test('用户长 JSON 的全部节点可访问，窗口渲染量不随节点总数增长', () => {
-  const source = readFileSync(
-    new URL('../docs/longtest.json', import.meta.url),
-    'utf8',
-  )
+test('长 JSON 的全部节点可访问，窗口渲染量不随节点总数增长', () => {
+  const source = largeJsonFixture()
   const parsed = readJson(source)
   assert.equal(parsed.error, undefined)
   const rows = flattenJsonTree(parsed.root!, true, new Set())

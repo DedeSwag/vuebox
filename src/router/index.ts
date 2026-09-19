@@ -20,6 +20,16 @@ const toRoute = (tool: (typeof tools)[number]): RouteRecordRaw => ({
 })
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/dev/url-toolkit',
+    name: 'url-toolkit',
+    redirect: to => ({ name: 'encoding-toolkit', query: to.query, hash: to.hash }),
+  },
+  {
+    path: '/dev/cron-generator',
+    name: 'cron-generator',
+    redirect: { name: 'timestamp-converter', query: { tab: 'cron' } },
+  },
   // 独立页面（不带 MainLayout）
   ...standaloneTools.map(toRoute),
   {
