@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
     base: env.VITE_BASE || '/',
     plugins: [vue()],
     server: {
+      host: '0.0.0.0',
       port: 3000
     },
     resolve: {

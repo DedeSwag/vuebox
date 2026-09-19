@@ -25,12 +25,23 @@ export const tools: ToolMeta[] = [
   {
     name: 'json-formatter',
     title: 'JSON 格式化',
-    description: 'JSON 数据格式化、压缩、校验',
+    description: 'JSON 格式化、压缩、错误定位、转义与树形预览',
     category: 'dev',
     icon: '{ }',
-    keywords: ['json', '格式化', '压缩', '校验'],
+    keywords: ['json', '格式化', '压缩', '校验', '转义', '树形', '美化'],
     path: '/dev/json-formatter',
     component: () => import('@/views/tools/dev/JsonFormatter.vue'),
+  },
+
+  {
+    name: 'cron-generator',
+    title: 'Cron 表达式生成器',
+    description: '可视化生成、校验 Cron 表达式，预览未来执行时间',
+    category: 'dev',
+    icon: '⏱️',
+    keywords: ['cron', 'crontab', '定时', '计划任务', '表达式', '执行时间'],
+    path: '/dev/cron-generator',
+    component: () => import('@/views/tools/dev/CronGenerator.vue'),
   },
 
   // ── 其他工具 ─────────────────────────────────────────

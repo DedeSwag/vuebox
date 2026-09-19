@@ -32,7 +32,7 @@ function goHome() {
     </header>
 
     <!-- 主内容区域 -->
-    <main class="main">
+    <main class="main" :class="{ 'main-wide': route.name === 'json-formatter' }">
       <router-view />
     </main>
 
@@ -116,6 +116,10 @@ function goHome() {
   margin: 0 auto;
   padding: 32px 24px;
   box-sizing: border-box;
+}
+
+.main-wide {
+  max-width: 1800px;
 }
 
 .footer {

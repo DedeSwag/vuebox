@@ -280,7 +280,7 @@ const discountText = computed(() => discount.value === 0.68 ? '6.8折' : '5.8折
 }
 
 .brand-img {
-  width: min(70%, 280px);
+  width: min(70%, 200px);
   height: auto;
   display: block;
   margin: 0 auto;
