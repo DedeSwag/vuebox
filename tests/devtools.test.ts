@@ -5,7 +5,6 @@ import { compareText, diffReport } from '../src/utils/textDiff.ts'
 import { decodeJwt, jwtTime, jwtTiming } from '../src/utils/jwt.ts'
 import { testRegex } from '../src/utils/regex.ts'
 import { digestBytes, hashAlgorithms } from '../src/utils/hash.ts'
-import { processLines, type TextBatchOptions } from '../src/utils/textBatch.ts'
 import { parseInteger, formatInteger } from '../src/utils/radix.ts'
 import { parseColor, colorFormats, contrastRatio } from '../src/utils/color.ts'
 
@@ -192,43 +191,6 @@ test('哈希：空字符串和 abc 标准摘要向量', async () => {
   const lengths = [64, 96, 128, 40]
   for (const [i, algorithm] of hashAlgorithms.entries())
     assert.equal((await digestBytes(bytes, algorithm)).length, lengths[i])
-})
-const batch: TextBatchOptions = {
-  trim: true,
-  removeEmpty: true,
-  dedupe: true,
-  ignoreCase: false,
-  sort: 'none',
-  numeric: true,
-  casing: 'none',
-  prefix: '',
-  suffix: '',
-}
-test('文本批处理：去重顺序、自然排序、命名与前后缀', () => {
-  assert.deepEqual(processLines(' b \r\na\r\nb\r\n\r\n', batch), {
-    text: 'b\na',
-    before: 5,
-    after: 2,
-  })
-  assert.equal(
-    processLines('item10\nitem2\nITEM2', {
-      ...batch,
-      ignoreCase: true,
-      sort: 'asc',
-      prefix: '[',
-      suffix: ']',
-    }).text,
-    '[item2]\n[item10]',
-  )
-  assert.equal(
-    processLines('HTTPServer\nuser_name', { ...batch, casing: 'camel' }).text,
-    'httpServer\nuserName',
-  )
-  assert.equal(
-    processLines('HTTPServer', { ...batch, casing: 'snake' }).text,
-    'http_server',
-  )
-  assert.equal(processLines('', batch).after, 0)
 })
 test('进制：超长整数所有进制往返、前缀与非法字符', () => {
   const value = -1234567890123456789012345678901234567890n

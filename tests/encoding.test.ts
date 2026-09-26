@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { decodeBase64, encodeBase64, decodeEscape, encodeEscape, generateUuids } from '../src/utils/encoding.ts'
+import { decodeBase64, encodeBase64, generateUuids } from '../src/utils/encoding.ts'
 
 test('Base64 标准向量和 UTF-8 往返，保留 BOM、换行、空白和 Emoji', () => {
   for (const [text, expected] of [['', ''], ['f', 'Zg=='], ['fo', 'Zm8='], ['foo', 'Zm9v'], ['foobar', 'Zm9vYmFy']]) {
@@ -25,33 +25,6 @@ test('Base64URL 字符表与填充；拒绝非法字符、位数、尾部位及�
   for (const text of ['a', 'Zg=', 'Zg===', 'Z=g=', '!!!!', 'Zh==', '/w=='])
     assert.throws(() => decodeBase64(text, 'standard'), /Base64|UTF-8/)
   assert.throws(() => encodeBase64('\ud800', 'standard'), /Unicode/)
-})
-
-test('HTML 单层转义与实体解码不会执行 HTML，校验非法数字实体', () => {
-  const text = '<script title="test">alert(\'中文\') & 😀</script>'
-  const encoded = encodeEscape(text, 'html')
-  assert.ok(!encoded.includes('<'))
-  assert.equal(decodeEscape(encoded, 'html'), text)
-  assert.equal(decodeEscape('&amp;lt;', 'html'), '&lt;')
-  assert.equal(decodeEscape('&#x1f600;&#128512;&nbsp;', 'html'), '😀😀\u00a0')
-  for (const entity of ['&#0;', '&#xD800;', '&#1114112;', '&unknown;']) assert.throws(() => decodeEscape(entity, 'html'))
-})
-
-test('Unicode / JSON 转义往返控制字符、引号、反斜杠和代理对', () => {
-  const input = '中文 😀\n\t"\\'
-  const encoded = encodeEscape(input, 'unicode')
-  assert.ok(encoded.includes('\\u4e2d'))
-  assert.ok(encoded.includes('\\ud83d\\ude00'))
-  assert.equal(decodeEscape(encoded, 'unicode'), input)
-  for (const text of ['\\u12', '\\x41', 'raw\nline', 'raw"quote']) assert.throws(() => decodeEscape(text, 'unicode'), /转义格式/)
-})
-
-test('UTF-8 十六进制往返、忽略分隔空白并拒绝损坏字节', () => {
-  assert.equal(encodeEscape('中', 'hex'), 'e4 b8 ad')
-  assert.equal(decodeEscape('E4B8AD', 'hex'), '中')
-  assert.equal(decodeEscape('e4\nb8\tad', 'hex'), '中')
-  for (const text of ['', '中文 😀', '\ufeff hi\n']) assert.equal(decodeEscape(encodeEscape(text, 'hex'), 'hex'), text)
-  for (const text of ['f', '0xff', 'gg', 'ff', 'e4b8']) assert.throws(() => decodeEscape(text, 'hex'))
 })
 
 test('UUID 批量生成具有 v4 版本位、正确变体，拒绝无效数量', () => {

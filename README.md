@@ -34,10 +34,10 @@ vuebox/
     ├── composables/
     │   └── useToolSearch.ts    # 搜索 composable
     ├── layouts/
-    │   └── MainLayout.vue      # 主布局（顶栏 + 内容 + 底栏）
+    │   └── MainLayout.vue      # 主布局（分类菜单 + 面包屑 + 内容）
     ├── components/
     │   ├── ToolCard.vue        # 工具卡片组件
-    │   └── ToolWrapper.vue     # 工具页面包裹组件（标题 + 返回）
+    │   └── ToolWrapper.vue     # 工具页面包裹组件（标题 + 内容）
     └── views/
         ├── HomePage.vue        # 首页（搜索 + 分类列表）
         ├── NotFound.vue        # 404 页面
@@ -46,10 +46,7 @@ vuebox/
             │   └── TextLength.vue
             ├── dev/            # 开发工具类
             │   └── JsonFormatter.vue
-            ├── image/          # 图片工具类
-            ├── encrypt/        # 加密解密类
-            ├── convert/        # 转换工具类
-            └── generate/       # 生成工具类
+            └── other/          # 生活工具组件
 ```
 
 ## 🚀 快速开始
@@ -72,6 +69,10 @@ npm run preview
 ```
 
 ## 📝 如何添加新工具
+
+### 文本文件规范
+
+新增及修改的文本文件统一使用 CRLF 行尾，遵循 `.editorconfig`、`.gitattributes` 和根目录 `AGENTS.md`。运行 `npm run fix:eol` 修复，再运行 `npm run check:eol` 检查；检查覆盖 Git 跟踪文件和未忽略的新增文件，跳过已删除文件、二进制及非 UTF-8 内容。Git 索引中的文本通常仍以 LF 规范化存储，工作区使用 CRLF。
 
 只需 **2 步**，无需修改路由或其他配置文件：
 
@@ -127,11 +128,19 @@ import ToolWrapper from '@/components/ToolWrapper.vue'
 
 ## 🛠️ 内置示例工具
 
-| 工具              | 分类     | 功能                                           |
-| ----------------- | -------- | ---------------------------------------------- |
-| 文本字数统计      | 文本处理 | 统计字符数、单词数、行数等                     |
-| JSON 格式化       | 开发工具 | JSON 格式化、压缩、校验                        |
-| Cron 表达式生成器 | 开发工具 | 可视化配置、5/6 位切换、校验、未来执行时间预览 |
+| 分类 | 工具 |
+| --- | --- |
+| 编码 / 格式化 | 时间戳转换、Base64 编解码、图片 Base64、JSON 格式化、JWT 解析、URL 编解码 |
+| 开发辅助 | 进制转换、颜色转换、Cron 表达式、UUID 生成、SQL 格式化、时区转换、HTTP 状态码速查 |
+| 文本处理 | 文本差异对比、文本字数统计、正则表达式测试 |
+| 图片 | 图片取色器 |
+| 数据处理 | Excel 转 JSON |
+| 加密 / 哈希 | 哈希计算、随机密码生成 |
+| 生活工具 | 世界时钟、朱富贵火锅菜价计算器 |
+
+除朱富贵火锅计算器以外，工具页面共用左侧两级菜单，所有分类直接展开，当前工具高亮；顶部面包屑可返回首页或分类列表。手机端通过“切换工具”展开菜单。朱富贵火锅计算器通过 `standalone: true` 使用原独立页面，不显示工具箱顶栏、菜单和面包屑。分类页入口为 `/category/:category`，分类键见 `src/config/categories.ts`。
+
+每个工具都有独立路由。保留旧编码与时间工具箱中仍支持的子工具链接跳转；火锅工具使用 `/zfg`，旧 `/other/hotpot-calculator` 链接也可跳转到此处。已下线工具的旧链接显示 404。
 
 ### JSON 在线格式化
 
@@ -150,28 +159,19 @@ import ToolWrapper from '@/components/ToolWrapper.vue'
 - 使用 [cron-parser](https://github.com/harrisiirak/cron-parser) 在 Web Worker 中计算，按浏览器本地时区预览，不实际执行任务。
 - `npm run test:cron` 运行解析、模板、执行时间及边界测试（需要 Node.js 22.6+）。
 
-## 新增开发工具
+## 本地运算与验证
 
-均为中文界面、浏览器本地处理，注册表自动接入首页搜索。生产部署入口带 `/toolbox/` 前缀。
+- Excel 转 JSON（`/data/excel-to-json`）：本地导入 `.xlsx` / `.xls`，选择工作表，配置对象数组或二维数组、起始行、值类型、空行和缩进。日期按显示文本输出，公式使用已有缓存结果；重复和空表头自动处理，支持复制和下载完整 JSON。通过 Worker 解析，可取消；文件最大 10 MiB，单表最多 50000 行、256 列、50 万格。采用 [SheetJS 官方分发版本](https://docs.sheetjs.com/docs/getting-started/installation/nodejs/) 0.20.3，打包进本地 Worker，运行时不请求外部 CDN。
+- 图片取色器（`/image/color-picker`）：选择或拖入本地图片，按原图像素取色并复制 HEX、RGB(A)、HSL(A)，保留透明度和最近 12 色。支持方向键微调取色位置，移动端可轻触取色；单张最大 10 MiB、2400 万像素，动图取加载时的一帧。
+- 图片 Base64（`/dev/image-base64`）：选图或拖入文件，输出完整 Data URL 或纯 Base64；支持反向还原、预览和下载。单张图片最大 5 MiB，支持 PNG、JPEG、GIF、WebP、BMP、ICO、AVIF、SVG；预览能力取决于浏览器。
+- HTTP 状态码速查（`/dev/http-status`）：64 个登记状态码的本地快照，支持编号、中英文关键词、1xx–5xx 分类和常用筛选。数据按 IANA 注册表核对，保留、弃用与临时登记状态有明确说明。
+- 随机密码生成（`/dev/password-generator`）：4–128 位、一次 1–100 条，可选大小写、数字、符号，支持排除易混淆字符、隐藏显示与复制。使用 Web Crypto 安全随机数及拒绝采样，每条密码覆盖全部所选类型，不写入本地存储。
 
-| 工具               | 入口                   | 主要功能                                                                |
-| ------------------ | ---------------------- | ----------------------------------------------------------------------- |
-| 文本差异对比       | `/text/diff`           | 文件导入、逐行/行内高亮、忽略空白/大小写/换行差异、仅看差异、复制报告   |
-| 正则测试           | `/dev/regex-tester`    | JavaScript 正则、捕获组、匹配高亮、替换预览；后台计算，2 秒超时终止     |
-| SQL 格式化         | `/dev/sql-formatter`   | MySQL、PostgreSQL、SQLite、SQL Server、Oracle、标准 SQL、BigQuery、Hive |
-| JWT 解析           | `/dev/jwt-viewer`      | 本地解码 Header/Payload、时间声明；仅解析，不验证签名或信任身份         |
-| JSON / YAML 互转   | `/dev/yaml-converter`  | YAML 1.2 双向转换；拒绝循环别名、不安全整数、非字符串键                 |
-| JSON 转 TypeScript | `/dev/json-types`      | 嵌套结构、数组联合类型、可选属性、只读模式                              |
-| 哈希计算           | `/dev/hash-calculator` | 文本/文件 SHA-256、384、512、1；摘要比对                                |
-| 文本批量处理       | `/text/batch`          | 按行去重、自然排序、去空行、命名转换、前后缀                            |
-| 进制转换           | `/dev/radix-converter` | 2–36 进制、BigInt 精确整数、正负号和进制前缀                            |
-| 颜色转换           | `/dev/color-converter` | HEX/RGB/HSL、透明度、文字背景预览与对比度                               |
+所有工具均为中文界面、浏览器本地处理，工具注册表同时驱动首页、搜索、侧栏和路由。生产部署入口带 `/toolbox/` 前缀。
 
-文本对比每侧最多 100 万字符、50,000 行，结果列表只渲染可见窗口；长行可点击查看全文。新增的正则、差异、文本批处理、SQL、YAML、类型推断通过 Web Worker 隔离运算，切换输入或离开页面会终止旧任务。摘要文件限制为 20 MiB。
+文本对比每侧最多 100 万字符、50,000 行，结果列表只渲染可见窗口；长行可点击查看全文。正则、差异、SQL 和 Cron 使用 Worker 计算，切换离开工具页时释放组件资源。JWT 只解析 Header/Payload 与时间声明，不验证签名。
 
-测试覆盖正常转换、非法输入、精度、随机差异往返、大文本与注入文本。长 JSON 测试优先使用本地 `docs/longtest.json`；没有该文件时自动生成嵌套样本，无需提交个人数据。新增和修改文件保持 CRLF。
-
-依赖：`diff` 用于文本差异，`sql-formatter` 用于 SQL 排版，`yaml` 用于 YAML 解析与序列化；摘要使用浏览器 Web Crypto。
+依赖：`diff` 用于文本差异，`sql-formatter` 用于 SQL 排版；摘要与 UUID 使用浏览器 Web Crypto。运行 `npm test` 验证保留工具的运算逻辑，运行 `npm run build` 进行类型检查与生产打包。
 
 ## 📦 技术栈
 

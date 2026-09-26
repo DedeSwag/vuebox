@@ -1,17 +1,25 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { categories } from '@/config/categories'
+import { tools } from '@/config/tools'
 import { useToolSearch } from '@/composables/useToolSearch'
 import ToolCard from '@/components/ToolCard.vue'
 
 const { keyword, groupedTools, resultCount } = useToolSearch()
+const route = useRoute()
+const category = computed(() => categories.find(item => item.key === route.params.category))
+const visibleGroups = computed(() => category.value ? groupedTools.value.filter(group => group.category.key === category.value?.key) : groupedTools.value)
+const visibleCount = computed(() => category.value ? visibleGroups.value.reduce((sum, group) => sum + group.tools.length, 0) : resultCount.value)
 </script>
 
 <template>
   <div class="home">
     <!-- Hero -->
     <section class="hero">
-      <h1 class="hero-title">🧰 VueBox</h1>
+      <h1 class="hero-title">{{ category ? `${category.icon} ${category.name}` : '在线工具箱' }}</h1>
       <p class="hero-subtitle">
-        一个开源的 Web 工具箱，集合各种实用小工具
+        {{ category ? category.description : `${categories.length} 大分类，${tools.length} 个实用工具 · 全部在浏览器本地运行` }}
       </p>
     </section>
 
@@ -19,24 +27,25 @@ const { keyword, groupedTools, resultCount } = useToolSearch()
     <div class="search-bar">
       <input
         v-model="keyword"
+        aria-label="搜索工具"
         type="text"
         placeholder="🔍 搜索工具..."
         class="search-input"
       />
       <span v-if="keyword" class="search-count">
-        找到 {{ resultCount }} 个工具
+        找到 {{ visibleCount }} 个工具
       </span>
     </div>
 
     <!-- 分类工具列表 -->
     <section
-      v-for="group in groupedTools"
+      v-for="group in visibleGroups"
       :key="group.category.key"
       class="category-section"
     >
       <h2 class="category-title">
         <span class="category-icon">{{ group.category.icon }}</span>
-        {{ group.category.name }}
+        <RouterLink :to="`/category/${group.category.key}`">{{ group.category.name }}</RouterLink>
       </h2>
       <div class="tool-grid">
         <ToolCard
@@ -48,7 +57,7 @@ const { keyword, groupedTools, resultCount } = useToolSearch()
     </section>
 
     <!-- 空状态 -->
-    <div v-if="groupedTools.length === 0 && keyword" class="empty">
+    <div v-if="visibleGroups.length === 0 && keyword" class="empty">
       <p>😅 没有找到匹配「{{ keyword }}」的工具</p>
     </div>
   </div>
@@ -124,8 +133,15 @@ const { keyword, groupedTools, resultCount } = useToolSearch()
 
 .tool-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 16px;
+}
+.category-title a { color: var(--text-h); }
+@media (max-width: 800px) {
+  .hero { padding: 20px 0; }
+  .hero-title { font-size: 30px; }
+  .hero-subtitle { font-size: 14px; }
+  .search-count { position: static; display: block; transform: none; margin-top: 6px; }
 }
 
 .empty {

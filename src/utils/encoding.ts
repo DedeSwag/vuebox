@@ -1,5 +1,4 @@
 export type Base64Mode = 'standard' | 'url'
-export type EscapeMode = 'html' | 'unicode' | 'hex'
 
 function utf8(text: string): Uint8Array {
   // Reject incomplete surrogate pairs instead of silently replacing user input.
@@ -31,32 +30,6 @@ export function decodeBase64(text: string, mode: Base64Mode): string {
   if (btoa(binary).replace(/=+$/, '') !== normalized)
     throw new Error('Base64 尾部位不合法，请检查输入是否完整。')
   return fromUtf8(Uint8Array.from(binary, char => char.charCodeAt(0)))
-}
-
-const entities: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' }
-export function encodeEscape(text: string, mode: EscapeMode): string {
-  if (mode === 'html') return text.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!)
-  if (mode === 'unicode') return JSON.stringify(text).slice(1, -1).replace(/[\u007f-\uffff]/g, char => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`)
-  return Array.from(utf8(text), byte => byte.toString(16).padStart(2, '0')).join(' ')
-}
-export function decodeEscape(text: string, mode: EscapeMode): string {
-  if (mode === 'html') return text.replace(/&(#x[\da-f]+|#\d+|[a-z][\da-z]*);/gi, (entity, name: string) => {
-    if (!name.startsWith('#')) {
-      if (Object.hasOwn(entities, name)) return entities[name]!
-      throw new Error(`暂不支持命名实体 ${entity}；支持 amp、lt、gt、quot、apos、nbsp 和数字实体。`)
-    }
-    const value = name[1]?.toLowerCase() === 'x' ? parseInt(name.slice(2), 16) : Number(name.slice(1))
-    if (!Number.isInteger(value) || value <= 0 || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff))
-      throw new Error(`无效的 Unicode 数字实体：${entity}`)
-    return String.fromCodePoint(value)
-  })
-  if (mode === 'unicode') {
-    try { return JSON.parse(`"${text}"`) as string }
-    catch { throw new Error('转义格式无效，请输入不带外层引号的 JSON 字符串内容，例如 \\u4e2d\\u6587。') }
-  }
-  const hex = text.replace(/\s/g, '')
-  if (!/^(?:[\da-f]{2})*$/i.test(hex)) throw new Error('十六进制格式无效：每个字节需要两位 0–9 / A–F，可用空白分隔。')
-  return fromUtf8(Uint8Array.from(hex.match(/../g) ?? [], byte => parseInt(byte, 16)))
 }
 
 export function generateUuids(count: number): string[] {

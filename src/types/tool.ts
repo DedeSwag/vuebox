@@ -28,6 +28,6 @@ export interface ToolMeta {
   path: string
   /** 对应组件 (懒加载) */
   component: () => Promise<unknown>
-  /** 是否独立页面（不使用 MainLayout） */
+  /** 独立页面，不使用工具箱布局 */
   standalone?: boolean
 }
