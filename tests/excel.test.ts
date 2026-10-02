@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import * as XLSX from 'xlsx'
-import { convertExcel, convertWorksheet, uniqueHeaders, maxExcelBytes, type ExcelOptions } from '../src/utils/excel.ts'
+import { readExcelSheets, convertExcel, convertWorksheet, uniqueHeaders, maxExcelBytes, type ExcelOptions } from '../src/utils/excel.ts'
 
 const defaults: ExcelOptions = { sheetName: '', mode: 'objects', startRow: 1, values: 'typed', skipBlank: true, indent: 2 }
 function fixture(bookType: 'xlsx' | 'xls' = 'xlsx') {
@@ -102,4 +102,15 @@ test('Excel：拒绝伪造文件、超限数据及无效选项，不静默截断
   assert.throws(() => convertWorksheet({ '!ref': 'A1:A2' }, { ...defaults, startRow: 3 }), /超出/)
   for (const ref of ['A1:IW2', 'A1:A50001', 'A1:Z30000']) assert.throws(() => convertWorksheet({ '!ref': ref }, defaults), /过大/)
   assert.throws(() => convertWorksheet({ '!ref': 'A1:A2', '!fullref': 'A1:A99999' }, defaults), /过大/)
+})
+
+test('Excel：选择文件仅读取所有工作表名称，选择非首张表后再转换', () => {
+  for (const format of ['xlsx', 'xls'] as const) {
+    const buffer = fixture(format)
+    assert.deepEqual(readExcelSheets(buffer), ['用户', '地区', '空表'])
+    const result = convertExcel(buffer, { ...defaults, sheetName: '地区' })
+    assert.equal(result.sheetName, '地区')
+    assert.deepEqual(JSON.parse(result.json), [{ 城市: '上海' }])
+  }
+  assert.throws(() => readExcelSheets(new TextEncoder().encode('not an excel').buffer), /有效/)
 })

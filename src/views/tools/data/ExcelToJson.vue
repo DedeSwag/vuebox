@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import DevTool from '@/components/DevTool.vue'
 import { useLocalClipboard } from '@/composables/useLocalClipboard'
 import { useWorkerTask } from '@/composables/useWorkerTask'
-import type { ExcelOptions, ExcelRequest, ExcelResult } from '@/utils/excel'
+import type { ExcelOptions, ExcelRequest, ExcelResult, ExcelMetadataRequest } from '@/utils/excel'
 
 const file = shallowRef<File>()
 const sheets = ref<string[]>([])
@@ -20,6 +20,10 @@ const { result, busy, error, run, reset } = useWorkerTask<ExcelRequest, ExcelRes
   () => new Worker(new URL('../../../workers/excel.worker.ts', import.meta.url), { type: 'module' }),
   20000,
 )
+const metadata = useWorkerTask<ExcelMetadataRequest, string[]>(
+  () => new Worker(new URL('../../../workers/excel.worker.ts', import.meta.url), { type: 'module' }), 20000,
+)
+watch(metadata.result, names => { sheets.value = names ?? []; sheetName.value = names?.[0] ?? '' }, { flush: 'sync' })
 const jsonPreview = computed(() => result.value?.json.slice(0, 100_000) ?? '')
 const downloadName = computed(() => `${file.value?.name.replace(/\.[^.]+$/, '') ?? '表格'}-${result.value?.sheetName ?? '工作表'}.json`.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_'))
 function releaseDownload() {
@@ -29,7 +33,6 @@ function releaseDownload() {
 watch(result, current => {
   releaseDownload()
   if (!current) return
-  sheets.value = current.sheets
   downloadUrl.value = URL.createObjectURL(new Blob([current.json], { type: 'application/json;charset=utf-8' }))
 }, { flush: 'sync' })
 function convert() {
@@ -37,8 +40,9 @@ function convert() {
   if (!file.value || inputError.value) return
   run({ file: file.value, options: { sheetName: sheetName.value, mode: mode.value, startRow: startRow.value, values: values.value, skipBlank: skipBlank.value, indent: indent.value } })
 }
-watch([file, sheetName, mode, startRow, values, skipBlank, indent], convert)
+watch([file, sheetName, mode, startRow, values, skipBlank, indent], () => { reset(); feedback.value = '' }, { flush: 'sync' })
 function clear() {
+  metadata.reset()
   file.value = undefined; sheets.value = []; sheetName.value = ''; inputError.value = ''; feedback.value = ''
   reset(); releaseDownload()
 }
@@ -49,6 +53,7 @@ function load(selected: File) {
   if (selected.size > 10 * 1024 * 1024) { inputError.value = 'Excel 文件最大支持 10 MiB。'; return }
   startRow.value = 1
   file.value = selected
+  metadata.run({ file: selected, operation: 'sheets' })
 }
 function selectFile(event: Event) {
   const input = event.target as HTMLInputElement
@@ -62,7 +67,7 @@ function drop(event: DragEvent) {
   load(files[0])
 }
 function changeSheet(event: Event) { sheetName.value = (event.target as HTMLSelectElement).value; startRow.value = 1 }
-function cancel() { reset(); feedback.value = '已取消转换，可点击“重新转换”重试。' }
+function cancel() { reset(); feedback.value = '已取消转换，可点击“转换为 JSON”重试。' }
 onBeforeUnmount(releaseDownload)
 </script>
 
@@ -73,6 +78,7 @@ onBeforeUnmount(releaseDownload)
       <p class="muted">支持 .xlsx / .xls，最大 10 MiB</p>
       <button @click="clear">清空</button>
     </div>
+    <p v-if="metadata.busy.value" class="note" role="status">正在读取工作表名称…</p><p v-if="metadata.error.value" class="error" role="alert">{{ metadata.error.value }}<button :disabled="!file" @click="file && metadata.run({ file, operation: 'sheets' })">重新读取</button></p>
     <p v-if="file" class="file-name muted">{{ file.name }} · {{ (file.size / 1024).toFixed(1) }} KiB</p>
     <div class="settings box">
       <label>工作表<select :value="sheetName || result?.sheetName || sheets[0] || ''" :disabled="!sheets.length" @change="changeSheet"><option v-if="!sheets.length" value="">请先导入 Excel</option><option v-for="sheet in sheets" :key="sheet" :value="sheet">{{ sheet }}</option></select></label>
@@ -82,7 +88,7 @@ onBeforeUnmount(releaseDownload)
       <label>JSON 缩进<select v-model.number="indent"><option :value="2">2 空格</option><option :value="4">4 空格</option><option :value="0">压缩</option></select></label>
       <label class="check"><input v-model="skipBlank" type="checkbox" />跳过空行</label>
     </div>
-    <div class="controls actions"><button :disabled="!file || busy" @click="convert">重新转换</button><button v-if="busy" @click="cancel">取消转换</button><span v-if="busy" role="status">正在本地读取并转换…</span><span v-else-if="result" class="muted">{{ result.sheetName }} · {{ result.rowCount.toLocaleString() }} 条数据 · {{ result.columnCount }} 列</span></div>
+    <div class="controls actions"><button class="button-primary" :disabled="!file || busy || metadata.busy.value || !sheets.length" @click="convert">转换为 JSON</button><button v-if="busy" @click="cancel">取消转换</button><span v-if="busy" role="status">正在本地读取并转换…</span><span v-else-if="result" class="muted">{{ result.sheetName }} · {{ result.rowCount.toLocaleString() }} 条数据 · {{ result.columnCount }} 列</span></div>
     <p v-if="inputError || error" class="error" role="alert">{{ inputError || error }}</p>
     <div v-if="result?.warnings.length" class="note" role="status"><p v-for="warning in result.warnings" :key="warning">{{ warning }}</p></div>
     <div class="two-col">
@@ -90,10 +96,10 @@ onBeforeUnmount(releaseDownload)
         <div class="box-head"><h2>数据预览</h2><span class="muted">前 50 行 / 20 列</span></div>
         <div v-if="result && result.columnCount" class="table-wrap preview-table"><table><thead><tr><th v-for="(header, index) in result.headers.slice(0, 20)" :key="index">{{ header }}</th></tr></thead><tbody><tr v-for="(row, rowIndex) in result.preview" :key="rowIndex"><td v-for="(value, columnIndex) in row.slice(0, 20)" :key="columnIndex" :title="String(value)"><span v-if="value === null" class="null-value">null</span><template v-else>{{ String(value) }}</template></td></tr></tbody></table></div>
         <p v-if="result && !result.rowCount" class="muted empty">没有可导出的数据行。</p>
-        <p v-if="!result" class="muted empty">导入文件后显示所选工作表的数据</p>
+        <p v-if="!result" class="muted empty">选择工作表并点击“转换为 JSON”查看数据</p>
       </section>
       <section class="box">
-        <div class="box-head"><h2><label for="excel-json">JSON 结果</label></h2><div class="result-actions"><button :disabled="!result" @click="copy(result!.json)">复制 JSON</button><a v-if="downloadUrl" :href="downloadUrl" :download="downloadName">下载 JSON</a></div></div>
+        <div class="box-head"><h2><label for="excel-json">JSON 结果</label></h2><div class="result-actions"><button :disabled="!result" @click="copy(result!.json)">复制 JSON</button><a class="button-link" v-if="downloadUrl" :href="downloadUrl" :download="downloadName">下载 JSON</a></div></div>
         <textarea id="excel-json" :value="jsonPreview" readonly spellcheck="false" placeholder="转换后显示 JSON" />
         <p v-if="result" class="muted result-size">共 {{ result.json.length.toLocaleString() }} 字符{{ result.json.length > 100_000 ? '；预览仅展示前 10 万字符，复制和下载包含完整结果。' : '' }}</p>
       </section>
@@ -109,6 +115,7 @@ onBeforeUnmount(releaseDownload)
 </template>
 
 <style scoped>
+@layer components {
 .upload { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 16px; border: 1px dashed var(--accent-border); border-radius: 10px; background: var(--accent-bg); }
 .upload label { flex: 1 1 260px; min-width: 0; }
 .upload input { width: 100%; }
@@ -131,4 +138,5 @@ onBeforeUnmount(releaseDownload)
 .note p + p { margin-top: 6px; }
 .note ul { padding-left: 20px; }
 @media (max-width: 768px) { .settings { grid-template-columns: minmax(0, 1fr); } #excel-json { min-height: 300px; } }
+}
 </style>

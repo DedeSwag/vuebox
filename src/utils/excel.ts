@@ -10,6 +10,7 @@ export interface ExcelOptions {
   indent: 0 | 2 | 4
 }
 export interface ExcelRequest { file: File; options: ExcelOptions }
+export interface ExcelMetadataRequest { file: File; operation: 'sheets' }
 export interface ExcelResult {
   sheets: string[]
   sheetName: string
@@ -83,22 +84,32 @@ export function convertWorksheet(sheet: XLSX.WorkSheet, options: ExcelOptions): 
   return { headers, preview, rowCount: records.length, columnCount, json, warnings }
 }
 
-export function convertExcel(buffer: ArrayBuffer, options: ExcelOptions): ExcelResult {
+export function readExcelSheets(buffer: ArrayBuffer): string[] {
   if (!buffer.byteLength) throw new Error('文件为空，请选择有效的 Excel 文件。')
   if (buffer.byteLength > maxExcelBytes) throw new Error('Excel 文件最大支持 10 MiB。')
   const bytes = new Uint8Array(buffer)
   const zip = bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 3 && bytes[3] === 4
   const ole = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1].every((v, i) => bytes[i] === v)
   if (!zip && !ole) throw new Error('文件不是有效的 .xlsx 或 .xls 工作簿，请勿直接修改文件后缀。')
+  try {
+    const info = XLSX.read(buffer, { type: 'array', bookSheets: true })
+    if (!info.SheetNames.length) throw new Error('empty workbook')
+    return info.SheetNames
+  } catch {
+    throw new Error('无法读取工作簿。请确认文件未损坏、未加密，并另存为 .xlsx 后重试。')
+  }
+}
+
+export function convertExcel(buffer: ArrayBuffer, options: ExcelOptions): ExcelResult {
+  if (!buffer.byteLength) throw new Error('文件为空，请选择有效的 Excel 文件。')
+  const sheets = readExcelSheets(buffer)
   let workbook: XLSX.WorkBook
   try {
     // 先取名称，再只读取所选表；行数限制同时保留 !fullref，超限时明确拒绝而非截断导出。
-    const info = XLSX.read(buffer, { type: 'array', bookSheets: true })
-    if (!info.SheetNames.length) throw new Error('empty workbook')
-    const name = options.sheetName || info.SheetNames[0]!
-    if (!info.SheetNames.includes(name)) throw new Error('missing sheet')
+    const name = options.sheetName || sheets[0]!
+    if (!sheets.includes(name)) throw new Error('missing sheet')
     workbook = XLSX.read(buffer, {
-      type: 'array', sheets: info.SheetNames.indexOf(name), cellNF: true, cellText: true,
+      type: 'array', sheets: sheets.indexOf(name), cellNF: true, cellText: true,
       cellDates: false, cellFormula: true, cellHTML: false, sheetRows: maxRows + 1,
     })
     const sheet = workbook.Sheets[name]

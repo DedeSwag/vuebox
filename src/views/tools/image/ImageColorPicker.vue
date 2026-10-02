@@ -167,7 +167,7 @@ onBeforeUnmount(clear)
         <p class="feedback" role="status">{{ feedback }}</p>
         <template v-if="history.length">
           <div class="box-head"><h2>最近取色</h2><span class="muted">最多 12 色</span></div>
-          <div class="palette"><button v-for="item in history" :key="item.formats.hex" class="checker" :aria-label="`选择颜色 ${item.formats.hex}`" :title="item.formats.hex" @click="choose(item)"><span :style="{ backgroundColor: item.formats.rgb }" /></button></div>
+          <div class="palette"><button v-for="item in history" :key="item.formats.hex" class="checker data-button" :aria-label="`选择颜色 ${item.formats.hex}`" :title="item.formats.hex" @click="choose(item)"><span :style="{ backgroundColor: item.formats.rgb }" /></button></div>
         </template>
       </section>
     </div>
@@ -175,16 +175,17 @@ onBeforeUnmount(clear)
 </template>
 
 <style scoped>
+@layer components {
 .upload { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 16px; margin-bottom: 20px; border: 1px dashed var(--accent-border); border-radius: 10px; background: var(--accent-bg); }
 .upload label { flex: 1 1 230px; min-width: 0; }
 .upload input { width: 100%; }
 .upload p { flex: 1 1 200px; line-height: 1.8; }
 .picker-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; align-items: start; }
-.checker { background-color: #fff; background-image: conic-gradient(#ddd 25%, transparent 0 50%, #ddd 0 75%, transparent 0); background-size: 16px 16px; }
+.checker { background-color: var(--checker-light); background-image: conic-gradient(var(--checker-dark) 25%, transparent 0 50%, var(--checker-dark) 0 75%, transparent 0); background-size: 16px 16px; }
 .image-stage { position: relative; width: fit-content; max-width: 100%; margin: 16px auto; }
 canvas { display: block; max-width: 100%; height: auto; max-height: none; cursor: crosshair; }
 canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.marker { position: absolute; width: 13px; height: 13px; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 1px #111; transform: translate(-50%, -50%); pointer-events: none; }
+.marker { position: absolute; width: 13px; height: 13px; border: 2px solid var(--marker-light); border-radius: 50%; box-shadow: 0 0 0 1px var(--marker-dark); transform: translate(-50%, -50%); pointer-events: none; }
 .file-name { overflow-wrap: anywhere; }
 .hover-value { margin-bottom: 12px; min-height: 20px; }
 .swatch { height: 104px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
@@ -199,4 +200,5 @@ canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .empty { min-height: 170px; display: grid; place-items: center; text-align: center; color: var(--text); font-size: 13px; }
 #picker-help { line-height: 1.8; }
 @media (max-width: 1000px) { .picker-layout { grid-template-columns: minmax(0, 1fr); } }
+}
 </style>

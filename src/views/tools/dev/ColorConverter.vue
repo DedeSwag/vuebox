@@ -1,12 +1,19 @@
 <script setup lang="ts">
+import { useManualResult } from '@/composables/useManualResult'
 import { computed, ref, watch } from 'vue'
 import DevTool from '@/components/DevTool.vue'
 import { useLocalClipboard } from '@/composables/useLocalClipboard'
 import { parseColor, colorFormats, contrastRatio } from '@/utils/color'
 const input = ref('#7C3AED'),
   background = ref('#FFFFFF')
+function pickerColor(value: string) {
+  try { return colorFormats(parseColor(value)).hex.slice(0, 7) }
+  catch { return '#000000' }
+}
+const foregroundPicker = computed(() => pickerColor(input.value))
+const backgroundPicker = computed(() => pickerColor(background.value))
 const { feedback, copy } = useLocalClipboard()
-const result = computed(() => {
+const { result: result, execute } = useManualResult([input, background], () => {
   try {
     const color = parseColor(input.value),
       bg = parseColor(background.value)
@@ -24,7 +31,7 @@ const result = computed(() => {
       error: (e as Error).message,
     }
   }
-})
+}, () => ({ formats: null, background: '', ratio: 0, error: '' }))
 watch([input, background], () => (feedback.value = ''))
 </script>
 <template>
@@ -38,7 +45,7 @@ watch([input, background], () => (feedback.value = ''))
           aria-label="前景颜色文本"
           placeholder="#7C3AED 或 rgb(124,58,237)" /><input
           type="color"
-          :value="result.formats?.hex.slice(0, 7) ?? '#000000'"
+          :value="foregroundPicker"
           aria-label="选择前景颜色"
           @input="input = ($event.target as HTMLInputElement).value" /></label
       ><label
@@ -47,11 +54,12 @@ watch([input, background], () => (feedback.value = ''))
           aria-label="背景颜色文本"
           placeholder="#FFFFFF" /><input
           type="color"
-          :value="background.match(/^#[\da-fA-F]{6}$/) ? background : '#ffffff'"
+          :value="backgroundPicker"
           aria-label="选择背景颜色"
           @input="background = ($event.target as HTMLInputElement).value"
       /></label>
     </div>
+    <div class="controls"><button class="button-primary" @click="execute">转换并计算对比度</button><button @click="input = ''; background = '#FFFFFF'">清空</button></div>
     <p v-if="result.error" class="error" role="alert">{{ result.error }}</p>
     <template v-if="result.formats"
       ><div class="color-preview-base">
@@ -90,8 +98,9 @@ watch([input, background], () => (feedback.value = ''))
   >
 </template>
 <style scoped>
+@layer components {
 .color-preview-base {
-  background: white;
+  background: var(--image-base);
   margin: 20px 0;
   border-radius: 10px;
 }
@@ -112,5 +121,6 @@ watch([input, background], () => (feedback.value = ''))
 input[type='color'] {
   width: 100%;
   height: 44px;
+}
 }
 </style>

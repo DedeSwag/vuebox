@@ -1,3 +1,5 @@
+
+@layer components {
 .dev-tool-wide {
   max-width: none !important;
 }
@@ -15,12 +17,6 @@
 }
 .dev-tool button {
   cursor: pointer;
-}
-.dev-tool button:hover:not(:disabled),
-.dev-tool button.active {
-  color: var(--accent);
-  background: var(--accent-bg);
-  border-color: var(--accent-border);
 }
 .dev-tool button:disabled {
   opacity: 0.45;
@@ -101,12 +97,12 @@
   font-size: 12px;
 }
 .dev-tool .error {
-  color: #c53942;
+  color: var(--error);
   overflow-wrap: anywhere;
   margin: 12px 0;
 }
 .dev-tool .success {
-  color: #238454;
+  color: var(--success);
 }
 .dev-tool .feedback {
   min-height: 24px;
@@ -153,14 +149,7 @@
   display: grid;
   gap: 14px;
 }
-@media (prefers-color-scheme: dark) {
-  .dev-tool .error {
-    color: #ff969b;
-  }
-  .dev-tool .success {
-    color: #86d5a9;
-  }
-}
+
 @media (max-width: 768px) {
   .dev-tool .two-col {
     grid-template-columns: minmax(0, 1fr);
@@ -168,4 +157,5 @@
   .dev-tool .box {
     padding: 12px;
   }
+}
 }

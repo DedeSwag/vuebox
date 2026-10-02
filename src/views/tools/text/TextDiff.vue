@@ -17,6 +17,10 @@ const trim = ref(false),
   normalizeEol = ref(true),
   onlyChanges = ref(false)
 const selected = ref<DiffRow>()
+const importVersions = { left: 0, right: 0 }
+watch(left, () => { importVersions.left++ }, { flush: 'sync' })
+watch(right, () => { importVersions.right++ }, { flush: 'sync' })
+onBeforeUnmount(() => { importVersions.left++; importVersions.right++ })
 const scrollTop = ref(0),
   scroller = ref<HTMLDivElement>()
 const { result, busy, error, run, reset } = useWorkerTask<
@@ -37,32 +41,19 @@ const rows = computed(
 )
 const start = computed(() => Math.max(0, Math.floor(scrollTop.value / 30) - 5))
 const visible = computed(() => rows.value.slice(start.value, start.value + 30))
-let debounce: ReturnType<typeof setTimeout> | undefined
 watch([left, right, trim, ignoreCase, normalizeEol], () => {
-  clearTimeout(debounce)
   reset()
   feedback.value = ''
   selected.value = undefined
-  debounce = setTimeout(
-    () =>
-      run({
-        left: left.value,
-        right: right.value,
-        options: {
-          trim: trim.value,
-          ignoreCase: ignoreCase.value,
-          normalizeEol: normalizeEol.value,
-        },
-      }),
-    250,
-  )
-})
+}, { flush: 'sync' })
+function execute() {
+  run({ left: left.value, right: right.value, options: { trim: trim.value, ignoreCase: ignoreCase.value, normalizeEol: normalizeEol.value } })
+}
 watch([rows, onlyChanges], async () => {
   scrollTop.value = 0
   await nextTick()
   if (scroller.value) scroller.value.scrollTop = 0
 })
-onBeforeUnmount(() => clearTimeout(debounce))
 function example() {
   left.value = '项目：VueBox\n版本：1.0\n功能：JSON 格式化\n状态：开发中'
   right.value =
@@ -77,20 +68,23 @@ function json() {
   }
   left.value = renderJson(a, '  ')
   right.value = renderJson(b, '  ')
+  execute()
 }
 async function load(event: Event, side: 'left' | 'right') {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+  const version = ++importVersions[side]
   try {
     if (file.size > 4_000_000)
       throw new Error('文件过大，请选择 100 万字符以内的文本。')
     const text = await file.text()
+    if (version !== importVersions[side]) return
     if (text.length > 1_000_000) throw new Error('文本超过 100 万字符。')
     if (side === 'left') left.value = text
     else right.value = text
   } catch (e) {
-    feedback.value = (e as Error).message
+    if (version === importVersions[side]) feedback.value = (e as Error).message
   } finally {
     input.value = ''
   }
@@ -99,6 +93,7 @@ function swap() {
   ;[left.value, right.value] = [right.value, left.value]
 }
 function clearInput() {
+  importVersions.left++; importVersions.right++; feedback.value = ''
   left.value = ''
   right.value = ''
   reset()
@@ -110,7 +105,7 @@ function clearInput() {
     description="比较配置、日志和接口返回 · 本地计算，大文本按需渲染"
     wide
   >
-    <div class="controls">
+    <div class="controls"><button class="button-primary" :disabled="busy" @click="execute">开始对比</button>
       <button @click="swap">交换左右</button
       ><button @click="json">JSON 格式化后比较</button
       ><button @click="example">载入示例</button
@@ -202,7 +197,7 @@ function clearInput() {
             <button
               v-for="row in visible"
               :key="row.id"
-              class="diff-row"
+              class="diff-row data-button"
               :class="row.kind"
               @click="selected = row"
             >
@@ -260,6 +255,7 @@ function clearInput() {
   </DevTool>
 </template>
 <style scoped>
+@layer components {
 .file-label {
   font-size: 12px;
 }
@@ -328,21 +324,22 @@ function clearInput() {
 }
 .remove .diff-cell:first-child,
 .change .diff-cell:first-child {
-  background: rgba(230, 70, 80, 0.13);
+  background: var(--diff-removed);
 }
 .add .diff-cell:last-child,
 .change .diff-cell:last-child {
-  background: rgba(35, 165, 90, 0.14);
+  background: var(--diff-added);
 }
 mark {
   background: none;
   color: inherit;
 }
 mark.changed {
-  background: rgba(230, 150, 50, 0.35);
+  background: var(--diff-changed);
   font-weight: 600;
 }
 .row-detail {
   margin-top: 16px;
+}
 }
 </style>

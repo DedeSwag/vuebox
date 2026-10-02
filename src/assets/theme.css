@@ -1,0 +1,76 @@
+/* All application UI colors live here. HotpotCalculator maintains its own theme. */
+:root {
+  color-scheme: light;
+  --theme-blue: #1387C0;
+  --theme-green: #117C0D;
+  --theme-purple: #BB5799;
+  --text: #6b6375;
+  --text-h: #08060d;  
+  --bg: #ffffff;
+  --border: #e5e4e7;
+  --code-bg: #f4f3ec;
+  --social-bg: #f8f7f3;
+  --theme-accent: var(--theme-blue);
+  --accent: var(--theme-accent);
+  --on-accent: #ffffff;
+  --accent-hover: color-mix(in srgb, var(--accent) 86%, black);
+  --accent-active: color-mix(in srgb, var(--accent) 74%, black);
+  --accent-bg: color-mix(in srgb, var(--accent) 10%, var(--bg));
+  --accent-border: color-mix(in srgb, var(--accent) 50%, var(--border));
+  --accent-shadow: color-mix(in srgb, var(--accent) 25%, transparent);
+  --accent-shadow-hover: color-mix(in srgb, var(--accent) 35%, transparent);
+  --button-bg: color-mix(in srgb, var(--accent) 8%, var(--bg));
+  --button-hover: color-mix(in srgb, var(--accent) 13%, var(--bg));
+  --button-active: color-mix(in srgb, var(--accent) 18%, var(--bg));
+  --success: #217747;
+  --error: #c53942;
+  --warning: #a15b0c;
+  --info: #2765b3;
+  --live: #22a777;
+  --json-key: #8548b2;
+  --json-string: var(--success);
+  --json-number: #ae5c14;
+  --json-boolean: var(--info);
+  --json-null: #a04468;
+  --diff-removed: color-mix(in srgb, var(--error) 13%, var(--bg));
+  --diff-added: color-mix(in srgb, var(--success) 14%, var(--bg));
+  --diff-changed: color-mix(in srgb, var(--warning) 35%, var(--bg));
+  --editor-selection: color-mix(in srgb, var(--accent) 28%, transparent);
+  --overlay: rgba(0, 0, 0, 0.55);
+  --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Reference surfaces for image transparency and contrast calculations remain neutral. */
+  --image-base: #ffffff;
+  --checker-light: #ffffff;
+  --checker-dark: #dddddd;
+  --marker-light: #ffffff;
+  --marker-dark: #111111;
+}
+
+:root[data-theme-color="green"] { --theme-accent: var(--theme-green); }
+:root[data-theme-color="purple"] { --theme-accent: var(--theme-purple); }
+
+:root[data-theme-mode="dark"] {
+    color-scheme: dark;
+    --accent: color-mix(in srgb, var(--theme-accent) 65%, white);
+    --text: #a9afbb;
+    --text-h: #f3f4f6;
+    --bg: #16171d;
+    --border: #363844;
+    --code-bg: #1f2028;
+    --social-bg: #23242c;
+    --on-accent: #16171d;
+    --accent-hover: color-mix(in srgb, var(--accent) 86%, white);
+    --accent-active: color-mix(in srgb, var(--accent) 74%, white);
+    --accent-bg: color-mix(in srgb, var(--accent) 15%, var(--bg));
+    --button-bg: color-mix(in srgb, var(--accent) 18%, var(--bg));
+    --button-hover: color-mix(in srgb, var(--accent) 26%, var(--bg));
+    --button-active: color-mix(in srgb, var(--accent) 34%, var(--bg));
+    --success: #8cd3a8;
+    --error: #ff969b;
+    --warning: #edb077;
+    --info: #89baf5;
+    --json-key: #c597ec;
+    --json-number: #edb077;
+    --json-null: #ec9ebe;
+    --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+}

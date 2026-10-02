@@ -17,6 +17,7 @@ defineProps<{
 </template>
 
 <style scoped>
+@layer components {
 .tool-card {
   display: flex;
   align-items: flex-start;
@@ -66,5 +67,6 @@ defineProps<{
   color: var(--text);
   margin: 0;
   line-height: 1.4;
+}
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import DevTool from '@/components/DevTool.vue'
 import { useLocalClipboard } from '@/composables/useLocalClipboard'
 import { useWorkerTask } from '@/composables/useWorkerTask'
@@ -19,24 +19,13 @@ const { result, busy, error, run, reset } = useWorkerTask<
     }),
   2000,
 )
-let debounce: ReturnType<typeof setTimeout> | undefined
 watch([pattern, flags, text, replacement], () => {
-  clearTimeout(debounce)
   reset()
   feedback.value = ''
-  if (pattern.value)
-    debounce = setTimeout(
-      () =>
-        run({
-          pattern: pattern.value,
-          flags: flags.value,
-          text: text.value,
-          replacement: replacement.value,
-        }),
-      300,
-    )
-})
-onBeforeUnmount(() => clearTimeout(debounce))
+}, { flush: 'sync' })
+function execute() {
+  run({ pattern: pattern.value, flags: flags.value, text: text.value, replacement: replacement.value })
+}
 const highlights = computed(() => {
   if (!result.value) return []
   let start = 0
@@ -68,7 +57,7 @@ function clearInput() {
   <DevTool
     title="正则表达式测试"
     description="JavaScript 正则匹配、捕获组和替换预览 · 超时自动停止"
-    ><div class="controls">
+    ><div class="controls"><button class="button-primary" :disabled="busy" @click="execute">测试并预览替换</button>
       <button @click="example">载入示例</button
       ><button @click="clearInput">清空</button>
     </div>
@@ -156,6 +145,7 @@ function clearInput() {
   >
 </template>
 <style scoped>
+@layer components {
 .regex-pattern {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 140px;
@@ -176,5 +166,6 @@ mark {
   .regex-pattern {
     grid-template-columns: 1fr;
   }
+}
 }
 </style>

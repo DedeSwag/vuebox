@@ -22,7 +22,6 @@ const notice = ref('')
 const dates = ref<string[]>([])
 const previewError = ref('')
 const loading = ref(false)
-const now = ref(new Date())
 const previewStart = ref(new Date())
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
@@ -158,72 +157,49 @@ function reset() {
   activeField.value = 1
   count.value = 10
   copyMessage.value = notice.value = ''
-  now.value = new Date()
+  invalidatePreview()
   emit('notify', '已重置 Cron 表达式生成器')
 }
 
 let worker: Worker | undefined
 let timer: ReturnType<typeof setTimeout> | undefined
 let requestId = 0
-watch(
-  [expression, count, now],
-  () => {
-    copyMessage.value = ''
-    clearTimeout(timer)
-    worker?.terminate()
-    worker = undefined
-    const id = ++requestId
-    dates.value = []
-    previewError.value = ''
-    const parsed = validation.value.parsed
-    if (parsed) {
-      format.value = parsed.format
-      if (format.value === 5 && activeField.value === 0) activeField.value = 1
+function invalidatePreview() {
+  requestId++
+  clearTimeout(timer)
+  worker?.terminate(); worker = undefined
+  dates.value = []; previewError.value = ''; loading.value = false; copyMessage.value = ''
+  const parsed = validation.value.parsed
+  if (parsed) {
+    format.value = parsed.format
+    if (format.value === 5 && activeField.value === 0) activeField.value = 1
+  }
+}
+watch([expression, count], invalidatePreview, { flush: 'sync' })
+function preview() {
+  invalidatePreview()
+  if (!validation.value.parsed || countError.value) return
+  const id = requestId
+  const current = new Date()
+  previewStart.value = current
+  loading.value = true
+  const finish = (message = '') => {
+    if (id !== requestId) return
+    clearTimeout(timer); worker?.terminate(); worker = undefined
+    loading.value = false; previewError.value = message
+  }
+  try {
+    worker = new Worker(new URL('../../../workers/cron.worker.ts', import.meta.url), { type: 'module' })
+    worker.onmessage = (event: MessageEvent<{ id: number; dates: string[]; error: string }>) => {
+      if (id !== requestId || event.data.id !== id) return
+      dates.value = event.data.dates
+      finish(event.data.error)
     }
-    loading.value = !!parsed && !countError.value
-    if (!loading.value) return
-    timer = setTimeout(() => {
-      const current = new Date()
-      // 预览使用本轮实际计算时间，输入变化后不沿用旧的起点。
-      previewStart.value = current
-      try {
-        worker = new Worker(
-          new URL('../../../workers/cron.worker.ts', import.meta.url),
-          { type: 'module' },
-        )
-        worker.onmessage = (
-          event: MessageEvent<{ id: number; dates: string[]; error: string }>,
-        ) => {
-          if (event.data.id !== requestId) return
-          dates.value = event.data.dates
-          previewError.value = event.data.error
-          loading.value = false
-          worker?.terminate()
-          worker = undefined
-        }
-        worker.onerror = () => {
-          if (id !== requestId) return
-          previewError.value = '执行时间计算失败，请点击“刷新时间”重试。'
-          loading.value = false
-          worker?.terminate()
-          worker = undefined
-        }
-        worker.postMessage({
-          id,
-          expression: expression.value,
-          count: count.value,
-          now: current.toISOString(),
-          tz: timezone,
-        })
-      } catch {
-        loading.value = false
-        previewError.value =
-          '无法启动执行时间预览，请使用支持 Web Worker 的浏览器。'
-      }
-    }, 180)
-  },
-  { immediate: true },
-)
+    worker.onerror = () => finish('执行时间计算失败，请重试。')
+    timer = setTimeout(() => finish('计算超时，已停止。请简化表达式或减少预览次数。'), 5000)
+    worker.postMessage({ id, expression: expression.value, count: count.value, now: current.toISOString(), tz: timezone })
+  } catch { finish('无法启动执行时间预览，请使用支持 Web Worker 的浏览器。') }
+}
 onBeforeUnmount(() => {
   clearTimeout(timer)
   worker?.terminate()
@@ -232,21 +208,23 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="cron-tool">
-    <div class="cron-toolbar"><p>可视化配置执行规则，实时校验并预览下一次运行时间。</p><button @click="reset">重置</button></div>
     <section class="expression-section" aria-labelledby="input-title">
       <div class="section-heading">
         <h2 id="input-title">01 <span>表达式输入</span></h2>
-        <div class="format-switch" aria-label="表达式格式">
-          <button
-            v-for="option in [6, 5] as const"
-            :key="option"
-            :aria-pressed="format === option"
-            :class="{ selected: format === option }"
-            :disabled="!validation.parsed"
-            @click="switchFormat(option)"
-          >
-            {{ option }} 位{{ option === 6 ? '（带秒）' : '（不带秒）' }}
-          </button>
+        <div class="expression-actions">
+          <div class="format-switch" aria-label="表达式格式">
+            <button
+              v-for="option in [6, 5] as const"
+              :key="option"
+              :aria-pressed="format === option"
+              :class="{ selected: format === option }"
+              :disabled="!validation.parsed"
+              @click="switchFormat(option)"
+            >
+              {{ option }} 位{{ option === 6 ? '（带秒）' : '（不带秒）' }}
+            </button>
+          </div>
+          <button type="button" @click="reset">重置</button>
         </div>
       </div>
       <label class="sr-only" for="cron-input">Cron 表达式</label>
@@ -544,15 +522,15 @@ onBeforeUnmount(() => {
               :aria-invalid="countError"
             />次</label
           ><button
-            class="chip"
+            class="button-primary"
             :disabled="!validation.parsed || countError"
-            @click="now = new Date()"
+            @click="preview"
           >
-            刷新时间
+            计算执行时间
           </button>
         </div>
         <p class="muted timezone">本地时区 · {{ timezone }}</p>
-        <p class="muted start-time">
+        <p v-if="dates.length || loading" class="muted start-time">
           起算：{{ dateFormatter.format(previewStart) }}
         </p>
         <p v-if="countError" class="error" role="status">
@@ -567,6 +545,7 @@ onBeforeUnmount(() => {
         <p v-else-if="previewError" class="error preview-empty" role="status">
           {{ previewError }}
         </p>
+        <p v-else-if="!dates.length" class="preview-empty">点击“计算执行时间”生成预览。</p>
         <ol v-else class="time-list">
           <li v-for="(date, index) in dates" :key="date">
             <span class="time-index">{{
@@ -586,9 +565,8 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.cron-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
-.cron-toolbar button { flex-shrink: 0; padding: 7px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text-h); }
-.cron-toolbar button:hover { border-color: var(--accent-border); color: var(--accent); background: var(--accent-bg); }
+@layer components {
+.expression-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 h2 {
   margin: 0;
   font-size: 13px;
@@ -651,13 +629,8 @@ summary:focus-visible {
   border: 0;
   border-radius: 6px;
   padding: 6px 10px;
-  background: transparent;
-  color: var(--text);
+
   font-size: 12px;
-}
-.format-switch button.selected {
-  color: var(--accent);
-  background: var(--accent-bg);
 }
 .expression-row {
   display: flex;
@@ -674,12 +647,11 @@ summary:focus-visible {
   font: 21px/1.5 var(--mono);
 }
 .expression-input.invalid {
-  border-color: #dc6262;
+  border-color: var(--error);
 }
 .primary-btn {
   border: 1px solid var(--accent);
-  background: var(--accent);
-  color: var(--bg);
+
   border-radius: 9px;
   padding: 10px 16px;
   white-space: nowrap;
@@ -692,10 +664,10 @@ summary:focus-visible {
   min-height: 21px;
 }
 .success {
-  color: #238454;
+  color: var(--success);
 }
 .error {
-  color: #c94242;
+  color: var(--error);
   font-size: 13px;
 }
 .notice {
@@ -714,16 +686,12 @@ summary:focus-visible {
   margin: 18px 0 24px;
 }
 .chip {
-  background: var(--bg);
+
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 5px 9px;
-  color: var(--text-h);
+
   font-size: 12px;
-}
-.chip:hover {
-  background: var(--accent-bg);
-  border-color: var(--accent-border);
 }
 .workspace {
   display: grid;
@@ -750,13 +718,7 @@ summary:focus-visible {
   padding: 9px 4px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  color: var(--text);
-  background: var(--bg);
-}
-.field-tabs button.selected {
-  border-color: var(--accent-border);
-  background: var(--accent-bg);
-  color: var(--accent);
+
 }
 .field-tabs code {
   background: transparent;
@@ -965,14 +927,7 @@ time {
   white-space: nowrap;
   border: 0;
 }
-@media (prefers-color-scheme: dark) {
-  .success {
-    color: #6ad79b;
-  }
-  .error {
-    color: #ff9797;
-  }
-}
+
 @media (max-width: 850px) {
   .workspace {
     grid-template-columns: 1fr;
@@ -1000,5 +955,6 @@ time {
     display: block;
     margin-left: 0;
   }
+}
 }
 </style>

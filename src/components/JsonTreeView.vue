@@ -101,7 +101,7 @@ function keyLabel(name: string) {
             <template v-else>
               <button
                 v-if="isContainer(row.node)"
-                class="node-toggle"
+                class="node-toggle data-button"
                 :aria-expanded="row.open"
                 :aria-label="`${row.open ? '折叠' : '展开'} ${row.name ?? '根节点'}`"
                 @click="toggle(row)"
@@ -110,7 +110,7 @@ function keyLabel(name: string) {
               ><span v-else class="node-spacer" />
               <button
                 v-if="row.name !== undefined"
-                class="node-key json-key"
+                class="node-key json-key data-button"
                 @click="selected = row"
               >
                 {{ keyLabel(row.name) }}<span class="punctuation">: </span>
@@ -126,7 +126,7 @@ function keyLabel(name: string) {
               >
               <button
                 v-else
-                class="node-value"
+                class="node-value data-button"
                 :class="`json-${row.node.type}`"
                 @click="selected = row"
               >
@@ -152,6 +152,7 @@ function keyLabel(name: string) {
   </div>
 </template>
 <style scoped>
+@layer components {
 .virtual-tree {
   display: flex;
   flex-direction: column;
@@ -198,10 +199,10 @@ function keyLabel(name: string) {
 }
 button {
   font: inherit;
-  background: transparent;
+
   border: 0;
   padding: 0;
-  color: inherit;
+
   cursor: pointer;
 }
 button:focus-visible {
@@ -269,5 +270,6 @@ button:focus-visible {
   font: 12px/20px var(--mono);
   margin: 6px 0 0;
   user-select: text;
+}
 }
 </style>

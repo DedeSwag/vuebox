@@ -4,8 +4,6 @@ export interface ToolCategory {
   key: string
   /** 分类显示名称 */
   name: string
-  /** 分类图标 (emoji 或 icon class) */
-  icon: string
   /** 分类描述 */
   description?: string
 }

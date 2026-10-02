@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import DevTool from '@/components/DevTool.vue'
+import SegmentedControl from '@/components/SegmentedControl.vue'
 import { useLocalClipboard } from '@/composables/useLocalClipboard'
 import { imageDataUrl, imageTypes, maxImageBytes, normalizeImageMime, parseImageBase64 } from '@/utils/imageBase64'
 const mode = ref<'encode' | 'decode'>('encode')
 const text = ref('')
 const fallbackMime = ref('image/png')
 const format = ref<'data' | 'raw'>('data')
+const selectedFile = shallowRef<File>()
 const fileInput = ref<HTMLInputElement>()
 const result = shallowRef<{ dataUrl: string; mime: string; size: number; width: number; height: number; name: string }>()
 const busy = ref(false)
@@ -22,7 +24,7 @@ function resetResult() {
   result.value = undefined; busy.value = false; error.value = ''; feedback.value = ''
 }
 watch([mode, text, fallbackMime], resetResult, { flush: 'sync' })
-function clear() { resetResult(); text.value = ''; if (fileInput.value) fileInput.value.value = '' }
+function clear() { selectedFile.value = undefined; resetResult(); text.value = ''; if (fileInput.value) fileInput.value.value = '' }
 function inspect(dataUrl: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const image = new Image()
@@ -66,29 +68,30 @@ async function convert(file?: File) {
 function selectFile(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  if (file) void convert(file)
+  if (file) { resetResult(); selectedFile.value = file }
   input.value = ''
 }
 function drop(event: DragEvent) {
   const files = event.dataTransfer?.files
   if (!files?.length) return
-  if (files.length !== 1) { resetResult(); error.value = '请每次选择一张图片。'; return }
-  void convert(files[0])
+  if (files.length !== 1) { selectedFile.value = undefined; resetResult(); error.value = '请每次选择一张图片。'; return }
+  resetResult(); selectedFile.value = files[0]
 }
 onBeforeUnmount(resetResult)
 </script>
 <template>
   <DevTool title="图片 Base64" description="图片与 Base64 双向转换，预览、复制及下载 · 文件仅在浏览器本地读取">
-    <div class="controls"><button :class="{ active: mode === 'encode' }" :aria-pressed="mode === 'encode'" @click="mode = 'encode'">图片 → Base64</button><button :class="{ active: mode === 'decode' }" :aria-pressed="mode === 'decode'" @click="mode = 'decode'">Base64 → 图片</button><button @click="clear">清空</button></div>
+    <div class="controls"><SegmentedControl v-model="mode" label="图片 Base64 转换方向" :options="[{ value: 'encode', label: '图片 → Base64' }, { value: 'decode', label: 'Base64 → 图片' }]" /><button @click="clear">清空</button></div>
     <div class="two-col"><section class="box">
-      <template v-if="mode === 'encode'"><h2>选择图片</h2><div class="drop-zone" @dragover.prevent @drop.prevent="drop"><label>点击选择或拖入一张图片<input ref="fileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp,image/x-icon,image/vnd.microsoft.icon,image/avif,image/svg+xml" @change="selectFile" /></label><p class="muted">支持 PNG、JPEG、GIF、WebP、BMP、ICO、AVIF、SVG，最大 5 MiB。</p></div></template>
-      <template v-else><label for="image-base64-input">图片 Base64 / Data URL<textarea id="image-base64-input" v-model="text" spellcheck="false" placeholder="data:image/png;base64,iVBOR… 或纯 Base64" :aria-invalid="!!error" aria-describedby="image-error" /></label><div class="controls decode-controls"><label>纯 Base64 的图片类型<select v-model="fallbackMime"><option v-for="type in imageTypes" :key="type.mime" :value="type.mime">{{ type.name }}</option></select></label><button :disabled="busy || !text.trim()" @click="convert()">还原图片</button></div><p class="muted">Data URL 自动识别类型；纯 Base64 请选对应格式。修改后点击还原。</p></template>
-      <div v-if="result" class="preview"><img :src="result.dataUrl" alt="本地图片预览" /><p class="muted">{{ result.name }} · {{ result.width }} × {{ result.height }} · {{ result.size.toLocaleString() }} 字节</p><a :href="result.dataUrl" :download="`image.${extension}`">下载图片（{{ extension }}）</a></div>
+      <template v-if="mode === 'encode'"><h2>选择图片</h2><div class="drop-zone" @dragover.prevent @drop.prevent="drop"><label>点击选择或拖入一张图片<input ref="fileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp,image/x-icon,image/vnd.microsoft.icon,image/avif,image/svg+xml" @change="selectFile" /></label><p class="muted">支持 PNG、JPEG、GIF、WebP、BMP、ICO、AVIF、SVG，最大 5 MiB。</p></div><p v-if="selectedFile" class="note">{{ selectedFile.name }}</p><button class="button-primary" :disabled="busy || !selectedFile" @click="convert(selectedFile)">转换为 Base64</button></template>
+      <template v-else><label for="image-base64-input">图片 Base64 / Data URL<textarea id="image-base64-input" v-model="text" spellcheck="false" placeholder="data:image/png;base64,iVBOR… 或纯 Base64" :aria-invalid="!!error" aria-describedby="image-error" /></label><div class="controls decode-controls"><label>纯 Base64 的图片类型<select v-model="fallbackMime"><option v-for="type in imageTypes" :key="type.mime" :value="type.mime">{{ type.name }}</option></select></label><button class="button-primary" :disabled="busy || !text.trim()" @click="convert()">还原图片</button></div><p class="muted">Data URL 自动识别类型；纯 Base64 请选对应格式。修改后点击还原。</p></template>
+      <div v-if="result" class="preview"><img :src="result.dataUrl" alt="本地图片预览" /><p class="muted">{{ result.name }} · {{ result.width }} × {{ result.height }} · {{ result.size.toLocaleString() }} 字节</p><a class="button-link" :href="result.dataUrl" :download="`image.${extension}`">下载图片（{{ extension }}）</a></div>
     </section><section class="box"><div class="box-head"><h2><label for="image-base64-output">编码结果</label></h2><button :disabled="!result" @click="copy(output)">复制结果</button></div><label class="format-label">输出格式<select v-model="format"><option value="data">完整 Data URL</option><option value="raw">纯 Base64</option></select></label><textarea id="image-base64-output" :value="output" readonly spellcheck="false" placeholder="转换后显示 Base64 内容" /><p class="muted">{{ output.length.toLocaleString() }} 字符 · 编码保留原始文件内容，不压缩图片。</p></section></div>
     <p v-if="busy" role="status" class="note">正在读取并验证图片…</p><p id="image-error" class="error" role="status">{{ error }}</p><p class="feedback" role="status">{{ feedback }}</p>
   </DevTool>
 </template>
 <style scoped>
+@layer components {
 .drop-zone { border: 1px dashed var(--accent-border); background: var(--accent-bg); border-radius: 8px; padding: 22px 14px; margin-top: 16px; }
 .drop-zone input { width: 100%; padding: 8px 0; border: 0; background: transparent; }
 .drop-zone p { margin-top: 12px; }
@@ -97,4 +100,5 @@ onBeforeUnmount(resetResult)
 .preview a { display: inline-block; margin-top: 10px; }
 .format-label { margin-bottom: 12px; }
 .decode-controls { margin: 14px 0; }
+}
 </style>

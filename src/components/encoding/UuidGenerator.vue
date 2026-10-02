@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { generateUuids } from '@/utils/encoding'
 const emit = defineEmits<{ notify: [message: string] }>()
 const count = ref<number | string>(1)
@@ -7,6 +7,7 @@ const uppercase = ref(false)
 const hyphens = ref(true)
 const ids = ref<string[]>([])
 const error = ref('')
+watch(count, () => { ids.value = []; error.value = '' }, { flush: 'sync' })
 const output = computed(() => ids.value.map(id => {
   const value = hyphens.value ? id : id.replace(/-/g, '')
   return uppercase.value ? value.toUpperCase() : value

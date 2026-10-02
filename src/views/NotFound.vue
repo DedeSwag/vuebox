@@ -8,11 +8,12 @@ const router = useRouter()
   <div class="not-found">
     <h1>404</h1>
     <p>页面未找到</p>
-    <button @click="router.push('/')">返回首页</button>
+    <button class="button-primary" @click="router.push('/')">返回首页</button>
   </div>
 </template>
 
 <style scoped>
+@layer components {
 .not-found {
   display: flex;
   flex-direction: column;
@@ -39,14 +40,9 @@ const router = useRouter()
   font-size: 15px;
   border: 1px solid var(--accent-border);
   border-radius: 8px;
-  background: var(--accent-bg);
-  color: var(--accent);
+
   cursor: pointer;
   transition: all 0.2s;
 }
-
-.not-found button:hover {
-  background: var(--accent);
-  color: #fff;
 }
 </style>

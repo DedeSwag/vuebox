@@ -1,45 +1,67 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
-import { customZone, offsetLabel, presetZones, zoneOffset, zoneParts, type TimeZone } from '@/utils/timezones'
-const emit = defineEmits<{ notify: [message: string] }>()
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import SegmentedControl from '@/components/SegmentedControl.vue'
+import { offsetLabel, presetZones, zoneOffset, zoneParts } from '@/utils/timezones'
+import { clockRegions, filterWorldTimeZones, getSupportedWorldTimeZones, relativeToBeijing, type ClockRegion } from '@/utils/worldTimeZones'
+defineEmits<{ notify: [message: string] }>()
+const availableZones = getSupportedWorldTimeZones()
+const commonZones = presetZones.map(zone => ({ ...availableZones.find(item => item.id === zone.id), ...zone }))
+const mode = ref<'common' | 'world'>('common')
+const query = ref('')
+const region = ref<ClockRegion | 'all'>('all')
+const page = ref(1)
+const pageSize = 24
+const browserTop = ref<HTMLElement>()
+const licenseUrl = `${import.meta.env.BASE_URL}licenses/Unicode-3.0.txt`
+const filteredZones = computed(() => mode.value === 'common' ? commonZones : filterWorldTimeZones(availableZones, query.value, region.value))
+const pageCount = computed(() => Math.ceil(filteredZones.value.length / pageSize))
+const pageStart = computed(() => (page.value - 1) * pageSize)
+const visibleZones = computed(() => filteredZones.value.slice(pageStart.value, pageStart.value + pageSize))
+watch([mode, query, region], () => { page.value = 1 })
+function switchMode(value: 'common' | 'world') {
+  mode.value = value
+  query.value = ''
+  region.value = 'all'
+}
+async function changePage(value: number) {
+  page.value = Math.max(1, Math.min(value, pageCount.value))
+  await nextTick()
+  browserTop.value?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+}
 const now = ref(Date.now())
-const zones = ref<TimeZone[]>([...presetZones])
-const selected = ref('')
-const offset = ref('+05:30')
-const available = computed(() => presetZones.filter(zone => !zones.value.some(z => z.id === zone.id)))
-const cards = computed(() => zones.value.map(zone => ({ zone, ...zoneParts(now.value, zone), offset: offsetLabel(zoneOffset(now.value, zone)) })))
+const beijingZone = presetZones.find(zone => zone.id === 'Asia/Shanghai')!
+const cards = computed(() => {
+  const beijingOffset = zoneOffset(now.value, beijingZone)
+  return visibleZones.value.map(zone => {
+    const offset = zoneOffset(now.value, zone)
+    const relative = relativeToBeijing(offset, beijingOffset)
+    return { zone, ...zoneParts(now.value, zone), offset: offsetLabel(offset), relative }
+  })
+})
 const timer = setInterval(() => { now.value = Date.now() }, 1000)
 onBeforeUnmount(() => clearInterval(timer))
-function add(zone: TimeZone) {
-  if (zones.value.some(z => z.id === zone.id)) { emit('notify', '该时区已在面板中'); return }
-  zones.value.push(zone); emit('notify', `已添加${zone.label}`)
-  selected.value = available.value[0]?.id ?? ''
-}
-function addPreset() { const zone = presetZones.find(z => z.id === selected.value); if (zone) add(zone) }
-function addCustom() {
-  try { add(customZone(offset.value)) } catch (reason) { emit('notify', (reason as Error).message) }
-}
-function remove(id: string) { zones.value = zones.value.filter(z => z.id !== id); selected.value = available.value[0]?.id ?? '' }
-function reset() { zones.value = [...presetZones]; selected.value = ''; offset.value = '+05:30'; now.value = Date.now(); emit('notify', '已恢复默认的 7 个世界时钟') }
-async function copy(card: typeof cards.value[number]) {
-  try { await navigator.clipboard.writeText(`${card.zone.label} ${card.date} ${card.time} ${card.weekday} ${card.offset}`); emit('notify', `已复制${card.zone.label}时间`) }
-  catch { emit('notify', '复制失败，请手动选择时间复制。') }
-}
 </script>
 <template>
-  <div class="time-actions"><p><span class="clock-live" />每秒更新 · 城市时区自动适配夏令时</p><button @click="reset">重置</button></div>
-  <div class="clock-controls time-panel">
-    <div><label for="clock-zone">添加预设时区</label><div class="inline-controls"><select id="clock-zone" v-model="selected"><option value="">{{ available.length ? '选择时区' : '所有预设时区均已添加' }}</option><option v-for="zone in available" :key="zone.id" :value="zone.id">{{ zone.label }}</option></select><button :disabled="!available.some(z => z.id === selected)" @click="addPreset">添加</button></div></div>
-    <div><label for="clock-offset">自定义固定偏移（±HH:mm）</label><div class="inline-controls"><input id="clock-offset" v-model="offset" placeholder="+05:30" @keyup.enter="addCustom" /><button @click="addCustom">添加</button></div></div>
+  <div ref="browserTop" class="clock-browser">
+    <div class="clock-toolbar">
+      <SegmentedControl :model-value="mode" label="时钟范围" :options="[{ value: 'common', label: `常用` }, { value: 'world', label: `全球` }]" @update:model-value="switchMode" />
+      <p class="clock-intro"><span class="clock-live" />每秒更新 · 自动适配夏令时</p>
+    </div>
+    <div v-if="mode === 'world'" class="clock-filters">
+      <div><label for="clock-search">搜索国家 / 城市</label><input id="clock-search" v-model="query" type="search" placeholder="例如：印度、迪拜、New York" /></div>
+      <div><label for="clock-region">地区</label><select id="clock-region" v-model="region"><option value="all">全部地区</option><option v-for="item in clockRegions" :key="item.id" :value="item.id">{{ item.label }}</option></select></div>
+    </div>
+    <p v-if="mode === 'world'" class="clock-results" role="status">找到 {{ filteredZones.length }} 个城市 / 地区<span v-if="filteredZones.length">，当前显示 {{ pageStart + 1 }}–{{ Math.min(pageStart + pageSize, filteredZones.length) }}</span>。支持中文名称、英文名称及国家代码搜索。</p>
   </div>
   <div class="clock-grid">
     <article v-for="card in cards" :key="card.zone.id" class="time-panel clock-card">
-      <div class="time-actions"><h2>{{ card.zone.label }}</h2><button :aria-label="`移除世界时钟${card.zone.label}`" @click="remove(card.zone.id)">移除</button></div>
-      <span class="offset-badge">{{ card.offset }}</span>
+      <div class="clock-heading"><h2>{{ card.zone.label }}</h2><p v-if="mode === 'world'" class="clock-country">{{ card.zone.country }}</p></div>
       <time :datetime="new Date(now).toISOString()">{{ card.time }}</time>
       <p class="clock-date">{{ card.date }} <span>{{ card.weekday }}</span></p>
-      <div class="time-actions"><span class="time-hint">{{ card.zone.offset === undefined ? card.zone.id : '固定 UTC 偏移' }}</span><button :aria-label="`复制世界时钟${card.zone.label}`" @click="copy(card)">复制</button></div>
+      <p class="clock-offset"><span class="offset-badge">{{ card.offset }}</span><span>（{{ card.relative }}）</span></p>
     </article>
   </div>
-  <p v-if="!cards.length" class="time-note">暂无时钟。添加时区，或点击“重置”恢复默认面板。</p>
+  <p v-if="!cards.length" class="time-note">没有找到匹配的城市或地区，请换一个关键词，或选择“全部地区”。</p>
+  <nav v-if="pageCount > 1" class="clock-pagination" aria-label="全球时钟分页"><button :disabled="page === 1" @click="changePage(page - 1)">上一页</button><span>第 {{ page }} / {{ pageCount }} 页</span><button :disabled="page === pageCount" @click="changePage(page + 1)">下一页</button></nav>
+  <p v-if="mode === 'world'" class="clock-source">当前浏览器可显示 {{ availableZones.length }} 个城市 / 地区。目录：<a href="https://www.iana.org/time-zones" target="_blank" rel="noopener noreferrer">IANA</a>；中文名称：Unicode CLDR（<a :href="licenseUrl" target="_blank" rel="noopener noreferrer">使用许可</a>）。</p>
 </template>

@@ -6,7 +6,7 @@ const now = ref(Date.now())
 const initial = Math.floor(now.value / 1000) * 1000
 const timestamp = ref(String(initial / 1000))
 const dateInput = ref(toDateInput(initial))
-const milliseconds = ref<number | null>(initial)
+const milliseconds = ref<number | null>(null)
 const unit = ref<TimestampUnit>('auto')
 const detectedUnit = ref('seconds')
 const format = ref<DateFormat>('yyyy-MM-dd HH:mm:ss')
@@ -20,6 +20,7 @@ const millis = computed(() => milliseconds.value === null ? '' : String(millisec
 const timer = setInterval(() => { now.value = Date.now() }, 1000)
 onBeforeUnmount(() => clearInterval(timer))
 
+function invalidate() { milliseconds.value = null; error.value = '' }
 function fromTimestamp() {
   error.value = ''
   milliseconds.value = null
@@ -63,7 +64,8 @@ function reset() {
   unit.value = 'auto'
   format.value = 'yyyy-MM-dd HH:mm:ss'
   timestamp.value = String(Math.floor(Date.now() / 1000))
-  fromTimestamp()
+  dateInput.value = toDateInput(Number(timestamp.value) * 1000)
+  invalidate()
   emit('notify', '已重置时间戳转换')
 }
 async function copy(value: string, label: string) {
@@ -93,15 +95,16 @@ async function copy(value: string, label: string) {
         <section class="panel" aria-labelledby="timestamp-heading">
           <div class="panel-heading"><span class="step">01</span><h2 id="timestamp-heading">时间戳</h2><span class="subtitle">Unix timestamp</span></div>
           <label for="timestamp-unit">时间戳单位</label>
-          <select id="timestamp-unit" v-model="unit" @change="fromTimestamp">
+          <select id="timestamp-unit" v-model="unit" @change="invalidate">
             <option value="auto">自动识别（秒 / 毫秒）</option>
             <option value="seconds">秒（s）</option>
             <option value="milliseconds">毫秒（ms）</option>
           </select>
           <label for="timestamp-input">输入时间戳</label>
-          <input id="timestamp-input" v-model="timestamp" type="text" inputmode="numeric" placeholder="例如：1704067200" autocomplete="off" :aria-invalid="!!error" aria-describedby="conversion-error timestamp-help" @input="fromTimestamp" />
+          <input id="timestamp-input" v-model="timestamp" type="text" inputmode="numeric" placeholder="例如：1704067200" autocomplete="off" :aria-invalid="!!error" aria-describedby="conversion-error timestamp-help" @input="invalidate" />
           <p id="timestamp-help" class="help">自动识别 10 位秒、13 位毫秒；不足 10 位按秒处理。</p>
-          <div class="state-line">{{ milliseconds !== null ? `当前按${detectedUnit === 'seconds' ? '秒' : '毫秒'}解析 · 实时联动` : '等待输入时间戳或日期' }}</div>
+          <button class="button-primary" :disabled="!timestamp.trim()" @click="fromTimestamp">转换为日期</button>
+          <div class="state-line">{{ milliseconds !== null ? `当前按${detectedUnit === 'seconds' ? '秒' : '毫秒'}解析` : '输入时间戳或日期后点击转换' }}</div>
           <div class="result"><div class="result-label">秒级时间戳 <button :disabled="!seconds" @click="copy(seconds, '秒级时间戳')">复制</button></div><output>{{ seconds || '—' }}</output></div>
           <div class="result"><div class="result-label">毫秒级时间戳 <button :disabled="!millis" @click="copy(millis, '毫秒级时间戳')">复制</button></div><output>{{ millis || '—' }}</output></div>
         </section>
@@ -109,7 +112,7 @@ async function copy(value: string, label: string) {
         <section class="panel" aria-labelledby="date-heading">
           <div class="panel-heading"><span class="step">02</span><h2 id="date-heading">北京时间</h2><span class="subtitle">UTC+8</span></div>
           <label for="date-input">选择日期和时间</label>
-          <input id="date-input" v-model="dateInput" type="datetime-local" step="0.001" min="0001-01-01T00:00" max="9999-12-31T23:59:59.999" aria-describedby="conversion-error date-help" @input="fromDate" />
+          <input id="date-input" v-model="dateInput" type="datetime-local" step="0.001" min="0001-01-01T00:00" max="9999-12-31T23:59:59.999" aria-describedby="conversion-error date-help" @input="invalidate" />
           <p id="date-help" class="help">所选时间始终按北京时间解释，支持毫秒精度。</p>
           <button class="primary" :disabled="!dateInput" @click="fromDate">生成时间戳 <span aria-hidden="true">→</span></button>
           <label for="date-format">日期输出格式</label>
@@ -127,16 +130,16 @@ async function copy(value: string, label: string) {
 </template>
 
 <style scoped>
+@layer components {
 .timestamp-tool { font-size: 14px; }
 .live-bar, .toolbar, .panel-heading, .result-label { display: flex; align-items: center; gap: 10px; }
 .live-bar { justify-content: space-between; flex-wrap: wrap; padding: 16px; background: var(--accent-bg); border-radius: 10px; }
 .live-bar strong { display: inline-block; margin-left: 10px; color: var(--text-h); font-family: var(--mono); font-variant-numeric: tabular-nums; }
-.live-dot { display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: #22a777; }
+.live-dot { display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--live); }
 .badge { color: var(--accent); font-size: 12px; }
 .toolbar { flex-wrap: wrap; margin: 20px 0; }
 button, input, select { font: inherit; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text-h); }
 button { padding: 7px 12px; cursor: pointer; }
-button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent-border); background: var(--accent-bg); }
 button:disabled { opacity: .45; cursor: not-allowed; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .clear { margin-left: auto; color: var(--text); }
@@ -159,7 +162,7 @@ output { display: block; margin-top: 9px; font-family: var(--mono); font-size: 1
 .primary span { margin-left: 8px; }
 .date-result { margin-top: 20px; }
 .date-result output { font-size: 18px; }
-.error { color: #da4242; }
+.error { color: var(--error); }
 .error:not(:empty), .message:not(:empty) { margin-top: 14px; }
 .message { color: var(--accent); }
 .note { margin-top: 24px; padding: 16px; border-radius: 8px; background: var(--social-bg); font-size: 12px; line-height: 1.8; }
@@ -171,5 +174,6 @@ output { display: block; margin-top: 9px; font-family: var(--mono); font-size: 1
   .toolbar button { flex: 1 1 auto; }
   .live-bar strong { display: block; margin: 4px 0 0; }
   .subtitle { font-size: 10px; }
+}
 }
 </style>

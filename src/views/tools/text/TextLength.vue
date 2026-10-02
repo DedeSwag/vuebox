@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { useManualResult } from '@/composables/useManualResult'
+import { ref } from 'vue'
 import ToolWrapper from '@/components/ToolWrapper.vue'
 
 const text = ref('')
 
-const stats = computed(() => {
+type TextStats = { chars: number; charsNoSpace: number; words: number; lines: number; bytes: number }
+const { result: stats, execute } = useManualResult<TextStats | null>([text], () => {
   const val = text.value
   return {
     chars: val.length,
@@ -13,18 +15,21 @@ const stats = computed(() => {
     lines: val ? val.split('\n').length : 0,
     bytes: new Blob([val]).size,
   }
-})
+}, () => (null))
 </script>
 
 <template>
   <ToolWrapper title="文本字数统计" description="统计文本的字符数、单词数、行数等信息">
-    <textarea
+    <label for="count-input">待统计文本</label>
+    <textarea id="count-input"
       v-model="text"
       class="input-area"
       placeholder="请输入或粘贴文本..."
       rows="8"
     />
-    <div class="stats-grid">
+    <div class="controls"><button class="button-primary" @click="execute">统计字数</button><button @click="text = ''">清空</button></div>
+    <p v-if="!stats" class="note">输入文本后点击“统计字数”。字符数按 UTF-16 单元统计，单词按空白分隔。</p>
+    <div v-if="stats" class="stats-grid">
       <div class="stat-item">
         <span class="stat-value">{{ stats.chars }}</span>
         <span class="stat-label">字符数</span>
@@ -50,6 +55,7 @@ const stats = computed(() => {
 </template>
 
 <style scoped>
+@layer components {
 .input-area {
   width: 100%;
   padding: 14px;
@@ -97,5 +103,6 @@ const stats = computed(() => {
   font-size: 13px;
   color: var(--text);
   margin-top: 4px;
+}
 }
 </style>

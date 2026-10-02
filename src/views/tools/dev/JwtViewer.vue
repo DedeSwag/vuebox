@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useManualResult } from '@/composables/useManualResult'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import DevTool from '@/components/DevTool.vue'
 import { useLocalClipboard } from '@/composables/useLocalClipboard'
 import { decodeJwt, jwtTime, jwtTiming } from '@/utils/jwt'
@@ -9,14 +10,14 @@ const timer = setInterval(() => (now.value = Date.now() / 1000), 1000)
 onBeforeUnmount(() => clearInterval(timer))
 const { feedback, copy } = useLocalClipboard()
 watch(input, () => (feedback.value = ''))
-const parsed = computed(() => {
+const { result: parsed, execute } = useManualResult([input], () => {
   if (!input.value.trim()) return { data: null, error: '' }
   try {
     return { data: decodeJwt(input.value), error: '' }
   } catch (e) {
     return { data: null, error: (e as Error).message }
   }
-})
+}, () => ({ data: null, error: '' }))
 const claims: Record<string, string> = {
   iss: '签发者',
   sub: '主题',
@@ -40,7 +41,7 @@ function example() {
   <DevTool
     title="JWT 查看器"
     description="本地解码 Header 与 Payload，检查声明和到期时间"
-    ><div class="controls">
+    ><div class="controls"><button class="button-primary" @click="execute">解析 JWT</button>
       <button @click="example">载入演示令牌</button
       ><button @click="input = ''">清空</button>
     </div>

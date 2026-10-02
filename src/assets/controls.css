@@ -1,0 +1,90 @@
+/* Components provide layout; this later layer owns shared button appearance. */
+@layer controls {
+  :is(.layout, .tool-wrapper, .not-found) :is(button, .button-link) {
+    --control-bg: var(--button-bg);
+    --control-hover: var(--button-hover);
+    --control-active: var(--button-active);
+    --control-text: var(--text-h);
+    appearance: none;
+    background: var(--control-bg);
+    color: var(--control-text);
+    border: 1px solid var(--control-bg);
+    border-radius: 7px;
+    box-shadow: none;
+    padding: 8px 12px;
+    font: inherit;
+    line-height: 1.5;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+  :is(.layout, .tool-wrapper, .not-found) button:is(.button-primary, .primary, .primary-btn, .calculate-button, .accent, .active, .selected, [aria-pressed='true']) {
+    --control-bg: var(--accent);
+    --control-hover: var(--accent-hover);
+    --control-active: var(--accent-active);
+    --control-text: var(--on-accent);
+  }
+  :is(.layout, .tool-wrapper, .not-found) :is(button, .button-link):hover:not(:disabled) {
+    background: var(--control-hover);
+    border-color: var(--control-hover);
+    color: var(--control-text);
+  }
+  :is(.layout, .tool-wrapper, .not-found) :is(button, .button-link):active:not(:disabled) {
+    background: var(--control-active);
+    border-color: var(--control-active);
+  }
+  :is(.layout, .tool-wrapper, .not-found) :is(button, .button-link):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  :is(.layout, .tool-wrapper, .not-found) button:disabled { opacity: 0.45; cursor: not-allowed; }
+  :is(.layout, .tool-wrapper, .not-found) button.button-icon { width: 36px; height: 36px; padding: 0; }
+  :is(.layout, .tool-wrapper, .not-found) .segmented-control > button {
+    --control-bg: var(--social-bg);
+    --control-hover: var(--button-hover);
+    --control-active: var(--button-active);
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+  :is(.layout, .tool-wrapper, .not-found) .segmented-control > button[aria-checked='true'] {
+    --control-bg: var(--accent);
+    --control-hover: var(--accent-hover);
+    --control-active: var(--accent-active);
+    --control-text: var(--on-accent);
+    font-weight: 600;
+  }
+  .tool-wrapper .calculate-button { min-height: 44px; font-size: 16px; font-weight: 700; }
+  /* Data controls keep the visual meaning and density of the content they expose. */
+  .tool-wrapper button.data-button {
+    background: var(--bg);
+    color: inherit;
+    border-color: var(--border);
+    padding: 0;
+    font: inherit;
+  }
+  .tool-wrapper button.data-button:hover:not(:disabled) { background: var(--social-bg); color: inherit; }
+  .tool-wrapper button.data-button:is(.node-key, .node-value, .node-toggle) { background: var(--code-bg); border: 0; border-radius: 2px; }
+  .tool-wrapper button.data-button.diff-row { border: 0; border-radius: 0; font: 12px/30px var(--mono); }
+  .tool-wrapper button.data-button.checker {
+    background-color: var(--checker-light);
+    background-image: conic-gradient(var(--checker-dark) 25%, transparent 0 50%, var(--checker-dark) 0 75%, transparent 0);
+    background-size: 16px 16px;
+  }
+  .tool-wrapper button.json-key { color: var(--json-key); }
+  .tool-wrapper button.json-string { color: var(--json-string); }
+  .tool-wrapper button.json-number { color: var(--json-number); }
+  .tool-wrapper button.json-boolean { color: var(--json-boolean); }
+  .tool-wrapper button.json-null { color: var(--json-null); }
+  .tool-wrapper input[type='file']::file-selector-button {
+    background: var(--button-bg);
+    color: var(--text-h);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    margin-right: 10px;
+    cursor: pointer;
+  }
+  .tool-wrapper input[type='file']::file-selector-button:hover { background: var(--button-hover); }
+  .tool-wrapper .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0; }
+  @media (prefers-reduced-motion: reduce) { :is(.layout, .tool-wrapper, .not-found) :is(button, .button-link) { transition: none; } }
+}

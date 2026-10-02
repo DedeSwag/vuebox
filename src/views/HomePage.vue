@@ -17,7 +17,7 @@ const visibleCount = computed(() => category.value ? visibleGroups.value.reduce(
   <div class="home">
     <!-- Hero -->
     <section class="hero">
-      <h1 class="hero-title">{{ category ? `${category.icon} ${category.name}` : '在线工具箱' }}</h1>
+      <h1 class="hero-title">{{ category ? category.name : '在线工具箱' }}</h1>
       <p class="hero-subtitle">
         {{ category ? category.description : `${categories.length} 大分类，${tools.length} 个实用工具 · 全部在浏览器本地运行` }}
       </p>
@@ -44,7 +44,6 @@ const visibleCount = computed(() => category.value ? visibleGroups.value.reduce(
       class="category-section"
     >
       <h2 class="category-title">
-        <span class="category-icon">{{ group.category.icon }}</span>
         <RouterLink :to="`/category/${group.category.key}`">{{ group.category.name }}</RouterLink>
       </h2>
       <div class="tool-grid">
@@ -64,6 +63,7 @@ const visibleCount = computed(() => category.value ? visibleGroups.value.reduce(
 </template>
 
 <style scoped>
+@layer components {
 .home {
   max-width: 960px;
   margin: 0 auto;
@@ -127,10 +127,6 @@ const visibleCount = computed(() => category.value ? visibleGroups.value.reduce(
   margin: 0 0 16px;
 }
 
-.category-icon {
-  font-size: 24px;
-}
-
 .tool-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
@@ -149,5 +145,6 @@ const visibleCount = computed(() => category.value ? visibleGroups.value.reduce(
   padding: 60px 0;
   font-size: 16px;
   color: var(--text);
+}
 }
 </style>

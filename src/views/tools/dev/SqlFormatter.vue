@@ -19,7 +19,7 @@ const { feedback, copy } = useLocalClipboard()
 watch([source, language, keywordCase, tabWidth], () => {
   reset()
   feedback.value = ''
-})
+}, { flush: 'sync' })
 function format() {
   run({
     source: source.value,
@@ -33,6 +33,7 @@ function example() {
     "select u.id,u.name,count(o.id) as order_count from users u left join orders o on o.user_id=u.id where u.active=1 and o.created_at>='2026-01-01' group by u.id,u.name order by order_count desc;"
 }
 function clearInput() {
+  feedback.value = ''
   source.value = ''
   reset()
 }
@@ -66,7 +67,7 @@ function clearInput() {
           <option :value="2">2 空格</option>
           <option :value="4">4 空格</option>
         </select></label
-      ><button :disabled="busy" @click="format">
+      ><button class="button-primary" :disabled="busy" @click="format">
         {{ busy ? '格式化中…' : '格式化' }}</button
       ><button @click="example">载入示例</button
       ><button @click="clearInput">清空</button>

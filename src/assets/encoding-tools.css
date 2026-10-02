@@ -1,8 +1,8 @@
 
+@layer components {
 .encoding-toolkit { font-size: 14px; }
 .encoding-toolkit .encoding-controls :is(button, input, select, textarea) { font: inherit; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text-h); }
 .encoding-toolkit .encoding-controls button { padding: 7px 12px; cursor: pointer; }
-.encoding-controls button:hover:not(:disabled), .encoding-controls button.accent { color: var(--accent); background: var(--accent-bg); border-color: var(--accent-border); }
 .encoding-controls button:disabled { opacity: .45; cursor: not-allowed; }
 .encoding-toolkit :is(button, input, select, textarea):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .encoding-actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
@@ -21,10 +21,10 @@
 .encoding-controls textarea[readonly] { background: var(--social-bg); }
 .encoding-note { background: var(--social-bg); padding: 14px; border-radius: 8px; font-size: 12px; line-height: 1.8; margin-bottom: 20px; overflow-wrap: anywhere; }
 .encoding-hint { font-size: 12px; color: var(--text); margin-top: 8px; }
-.encoding-error { color: #c53942; margin-top: 14px; overflow-wrap: anywhere; }
-@media (prefers-color-scheme: dark) { .encoding-error { color: #ff9299; } }
+.encoding-error { color: var(--error); margin-top: 14px; overflow-wrap: anywhere; }
+
 @media (max-width: 700px) {
   .encoding-grid { grid-template-columns: minmax(0, 1fr); }
   .encoding-panel { padding: 14px; }
-  .encoding-toolkit .operation-actions { width: 100%; justify-content: flex-start; }
+}
 }

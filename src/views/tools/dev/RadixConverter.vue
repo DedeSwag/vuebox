@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useManualResult } from '@/composables/useManualResult'
 import { computed, ref, watch } from 'vue'
 import DevTool from '@/components/DevTool.vue'
 import { useLocalClipboard } from '@/composables/useLocalClipboard'
@@ -8,14 +9,14 @@ const input = ref(''),
   target = ref(36),
   uppercase = ref(true)
 const { feedback, copy } = useLocalClipboard()
-const result = computed(() => {
+const { result: result, execute } = useManualResult([input, base, target, uppercase], () => {
   if (!input.value.trim()) return { value: null, error: '' }
   try {
     return { value: parseInteger(input.value, base.value), error: '' }
   } catch (e) {
     return { value: null, error: (e as Error).message }
   }
-})
+}, () => ({ value: null, error: '' }))
 const outputs = computed(() => {
   if (result.value.value === null) return []
   return [...new Set([2, 8, 10, 16, target.value])].map((b) => ({
@@ -33,7 +34,7 @@ function example() {
   <DevTool
     title="进制转换"
     description="2–36 进制整数互转 · 使用 BigInt 保留大整数精度"
-    ><div class="controls">
+    ><div class="controls"><button class="button-primary" @click="execute">转换进制</button>
       <label
         >输入进制<select v-model.number="base">
           <option v-for="n in 35" :key="n" :value="n + 1">
@@ -76,7 +77,9 @@ function example() {
   >
 </template>
 <style scoped>
+@layer components {
 .results {
   margin-top: 18px;
+}
 }
 </style>

@@ -2,11 +2,14 @@ export interface TimeZone { id: string; label: string; offset?: number }
 export const presetZones: TimeZone[] = [
   { id: 'UTC', label: 'UTC' },
   { id: 'Asia/Shanghai', label: '北京时间' },
-  { id: 'Asia/Tokyo', label: '东京' },
-  { id: 'Asia/Singapore', label: '新加坡' },
-  { id: 'Europe/London', label: '伦敦' },
+  { id: 'America/Los_Angeles', label: '洛杉矶（太平洋时间）' },
   { id: 'America/New_York', label: '纽约' },
-  { id: 'America/Los_Angeles', label: '洛杉矶' },
+  { id: 'Europe/London', label: '伦敦' },
+  { id: 'Europe/Madrid', label: '马德里' },
+  { id: 'Asia/Singapore', label: '新加坡' },
+  { id: 'Asia/Tokyo', label: '东京' },
+  { id: 'Australia/Sydney', label: '悉尼' },
+  { id: 'America/Paramaribo', label: '苏里南' },
 ]
 const pad = (n: number) => String(n).padStart(2, '0')
 const formatters = new Map<string, Intl.DateTimeFormat>()

@@ -64,6 +64,7 @@ defineExpose({ locate })
   </div>
 </template>
 <style scoped>
+@layer components {
 .json-code-editor {
   position: relative;
   height: 480px;
@@ -108,7 +109,7 @@ textarea::placeholder {
   -webkit-text-fill-color: var(--text);
 }
 textarea::selection {
-  background: rgba(140, 110, 230, 0.28);
+  background: var(--editor-selection);
 }
 textarea:focus {
   outline: 2px solid var(--accent-border);
@@ -118,5 +119,6 @@ textarea:focus {
   .json-code-editor {
     height: 340px;
   }
+}
 }
 </style>

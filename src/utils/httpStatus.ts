@@ -6,7 +6,7 @@ export interface HttpStatus {
   common: boolean
 }
 export const httpStatusGroups = [
-  { key: 1, title: '1xx 信息响应' }, { key: 2, title: '2xx 成功' },
+  { key: 1, title: '1xx 信息' }, { key: 2, title: '2xx 成功' },
   { key: 3, title: '3xx 重定向' }, { key: 4, title: '4xx 客户端错误' },
   { key: 5, title: '5xx 服务端错误' },
 ]

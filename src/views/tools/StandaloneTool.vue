@@ -30,5 +30,7 @@ onBeforeUnmount(() => clearTimeout(timer))
   </ToolWrapper>
 </template>
 <style scoped>
+@layer components {
 .tool-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 200; padding: 12px 20px; max-width: calc(100vw - 32px); border-radius: 10px; background: var(--text-h); color: var(--bg); box-shadow: var(--shadow); }
+}
 </style>

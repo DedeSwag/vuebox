@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import DevTool from '@/components/DevTool.vue'
+import SegmentedControl from '@/components/SegmentedControl.vue'
 import { useLocalClipboard } from '@/composables/useLocalClipboard'
 import { digestBytes, hashAlgorithms, type HashAlgorithm } from '@/utils/hash'
 const mode = ref<'text' | 'file'>('text'),
@@ -11,6 +12,7 @@ const mode = ref<'text' | 'file'>('text'),
   error = ref(''),
   busy = ref(false)
 const file = shallowRef<File>()
+const fileInput = ref<HTMLInputElement>()
 const { feedback, copy } = useLocalClipboard()
 let generation = 0
 watch([mode, text, algorithm, file], () => {
@@ -19,7 +21,8 @@ watch([mode, text, algorithm, file], () => {
   error.value = ''
   feedback.value = ''
   busy.value = false
-})
+}, { flush: 'sync' })
+onBeforeUnmount(() => { generation++ })
 const comparison = computed(() => {
   if (!output.value || !expected.value.trim()) return ''
   const value = expected.value.replace(/\s/g, '').toLowerCase()
@@ -29,9 +32,14 @@ const comparison = computed(() => {
       ? '✓ 摘要一致'
       : '摘要不一致'
 })
+function clear() {
+  if (fileInput.value) fileInput.value.value = ''
+  generation++; text.value = ''; file.value = undefined; expected.value = ''; output.value = ''; error.value = ''; feedback.value = ''; busy.value = false
+}
 async function calculate() {
   const id = ++generation
   busy.value = true
+  feedback.value = ''
   error.value = ''
   output.value = ''
   try {
@@ -46,6 +54,7 @@ async function calculate() {
         throw new Error('文本最多支持 100 万字符。')
       bytes = new TextEncoder().encode(text.value).buffer
     }
+    if (id !== generation) return
     const digest = await digestBytes(bytes, algorithm.value)
     if (id === generation) output.value = digest
   } catch (e) {
@@ -60,17 +69,13 @@ async function calculate() {
     title="哈希摘要计算"
     description="计算文本或文件摘要，并核对预期值 · 文件仅在本地读取"
     ><div class="controls">
-      <button :class="{ active: mode === 'text' }" @click="mode = 'text'">
-        文本</button
-      ><button :class="{ active: mode === 'file' }" @click="mode = 'file'">
-        文件</button
-      ><label
+      <SegmentedControl v-model="mode" label="哈希输入类型" :options="[{ value: 'text', label: '文本' }, { value: 'file', label: '文件' }]" /><label
         >算法<select v-model="algorithm">
           <option v-for="item in hashAlgorithms" :key="item">{{ item }}</option>
         </select></label
-      ><button :disabled="busy" @click="calculate">
+      ><button class="button-primary" :disabled="busy" @click="calculate">
         {{ busy ? '计算中…' : '计算摘要' }}
-      </button>
+      </button><button @click="clear">清空</button>
     </div>
     <label v-if="mode === 'text'"
       >原始文本（UTF-8）<textarea
@@ -80,7 +85,7 @@ async function calculate() {
       /></label
     ><label v-else
       >选择文件（最大 20 MiB）<input
-        type="file"
+        ref="fileInput" type="file"
         @change="file = ($event.target as HTMLInputElement).files?.[0]"
       /><span class="muted">{{
         file
@@ -109,7 +114,9 @@ async function calculate() {
   >
 </template>
 <style scoped>
+@layer components {
 .compare {
   margin-top: 20px;
+}
 }
 </style>

@@ -36,21 +36,25 @@ const operation = ref<'pretty' | 'compact' | 'escape' | 'unescape'>('pretty')
 const feedback = ref('')
 const actionError = ref('')
 const fileInput = ref<HTMLInputElement>()
+let importVersion = 0
+watch(input, () => { importVersion++ }, { flush: 'sync' })
+onBeforeUnmount(() => { importVersion++ })
 async function importFile(event: Event) {
   const element = event.target as HTMLInputElement
   const file = element.files?.[0]
   if (!file) return
+  const version = ++importVersion
   try {
     if (file.size > 4_000_000)
       throw new Error('文件过大，请选择 100 万字符以内的 JSON。')
     const text = await file.text()
+    if (version !== importVersion) return
     if (text.length > 1_000_000)
       throw new Error('文本超过 100 万字符，请拆分后处理。')
     operation.value = 'pretty'
     input.value = text.replace(/^\uFEFF/, '')
-    generate()
   } catch (error) {
-    actionError.value = (error as Error).message
+    if (version === importVersion) actionError.value = (error as Error).message
   } finally {
     element.value = ''
   }
@@ -99,12 +103,13 @@ function generate() {
   }
   expansion.value = { open: true, version: expansion.value.version + 1 }
 }
-watch([input, indent, autoDecode], generate)
+watch([input, indent, autoDecode], () => { output.value = ''; actionError.value = ''; feedback.value = '' }, { flush: 'sync' })
 function apply(value: typeof operation.value) {
   operation.value = value
   generate()
 }
 function clear() {
+  importVersion++
   input.value = ''
   output.value = ''
   feedback.value = ''
@@ -115,7 +120,6 @@ function example() {
   operation.value = 'pretty'
   input.value =
     '{"项目":"VueBox","版本":1,"启用":true,"备注":null,"用户":{"名称":"开发者","标签":["Vue","TypeScript"]},"大整数":9007199254740993}'
-  generate()
 }
 function editOutput(value: string) {
   output.value = value
@@ -345,7 +349,7 @@ function setExpanded(open: boolean) {
       <details class="help">
         <summary>使用说明与转义规则</summary>
         <p>
-          输入修改后按当前操作自动更新结果。结果区支持独立编辑；再次修改输入、缩进或执行操作会重新生成结果。代码与树形视图共享同一份结果。
+          输入或选项修改后会清除旧结果，点击格式化、压缩、转义或反转义生成新结果。结果区支持独立编辑；代码与树形视图共享同一份结果。
         </p>
         <p>
           转义：将原始输入包装为合法 JSON
@@ -367,16 +371,9 @@ function setExpanded(open: boolean) {
 </template>
 
 <style scoped>
+@layer components {
 .json-formatter-page {
   max-width: none;
-}
-
-.json-tool {
-  --json-key: #8548b2;
-  --json-string: #217747;
-  --json-number: #ae5c14;
-  --json-boolean: #2765b3;
-  --json-null: #a04468;
 }
 .json-tool :deep(.json-key) {
   color: var(--json-key);
@@ -405,10 +402,6 @@ select {
 }
 button {
   cursor: pointer;
-}
-button:hover:not(:disabled) {
-  background: var(--accent-bg);
-  border-color: var(--accent-border);
 }
 button:disabled {
   cursor: not-allowed;
@@ -440,9 +433,7 @@ summary:focus-visible {
   flex-wrap: wrap;
 }
 button.primary {
-  color: var(--bg);
-  background: var(--accent);
-  border-color: var(--accent);
+
   font-weight: 600;
 }
 .indent-label {
@@ -511,10 +502,6 @@ h2 span {
   border: 0;
   padding: 4px 8px;
 }
-.result-tabs button.active {
-  background: var(--accent-bg);
-  color: var(--accent);
-}
 .panel:first-child :deep(.json-code-editor) {
   height: 522px;
 }
@@ -565,10 +552,10 @@ h2 span {
   font: 12px var(--mono);
 }
 .error {
-  color: #c53942;
+  color: var(--error);
 }
 .success {
-  color: #217747;
+  color: var(--success);
 }
 .message {
   font-size: 12px;
@@ -605,7 +592,7 @@ h2 span {
   overflow: hidden;
 }
 .result-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--overlay);
 }
 .result-dialog-content {
   height: 100%;
@@ -653,21 +640,7 @@ h2 span {
     height: calc(100dvh - 16px);
   }
 }
-@media (prefers-color-scheme: dark) {
-  .json-tool {
-    --json-key: #c597ec;
-    --json-string: #8cd3a8;
-    --json-number: #edb077;
-    --json-boolean: #89baf5;
-    --json-null: #ec9ebe;
-  }
-  .error {
-    color: #ff9299;
-  }
-  .success {
-    color: #8cd3a8;
-  }
-}
+
 @media (max-width: 768px) {
   .editors {
     grid-template-columns: 1fr;
@@ -681,5 +654,6 @@ h2 span {
   .options button {
     margin-left: 0;
   }
+}
 }
 </style>

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import brandImg from '@/assets/zhufugui.png'
 
 // ── 用餐人数 ─────────────────────────────────
-const diners = ref(2)
+const initialDiners = 2
+const initialDiscount = 0.68
+const diners = ref(initialDiners)
 function addDiners() {
   if (diners.value < 20) diners.value++
 }
@@ -12,7 +14,7 @@ function subDiners() {
 }
 
 // ── 折扣 ─────────────────────────────────────
-const discount = ref<0.68 | 0.58>(0.68)
+const discount = ref<0.68 | 0.58>(initialDiscount)
 const discountOptions = [
   { value: 0.68, label: '6.8折' },
   { value: 0.58, label: '5.8折' },
@@ -88,6 +90,24 @@ const hiddenDrinkCount = computed(() => drinks.value.length - 2)
 // ── 结算 ─────────────────────────────────────
 const showBill = ref(false)
 
+async function settle() {
+  showBill.value = true
+  await nextTick()
+  window.scrollTo({
+    top: document.documentElement.scrollHeight,
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+  })
+}
+
+function resetCalculator() {
+  diners.value = initialDiners
+  discount.value = initialDiscount
+  dishes.value.forEach(dish => { dish.count = 0 })
+  drinks.value.forEach(drink => { drink.count = 0 })
+  drinkExpanded.value = false
+  showBill.value = false
+}
+
 // ── 即时计算 ─────────────────────────────────
 const potFee = computed(() => diners.value * 12)
 const sauceFee = computed(() => diners.value * 4)
@@ -109,7 +129,10 @@ const discountText = computed(() => discount.value === 0.68 ? '6.8折' : '5.8折
 
     <!-- 用餐人数 -->
     <section class="card">
-      <div class="card-title">👥 用餐人数</div>
+      <div class="card-head">
+        <div class="card-title" style="margin-bottom:0">用餐人数</div>
+        <button type="button" class="reset-btn" title="恢复为2人、6.8折，并清空菜品和饮料" @click="resetCalculator">重置</button>
+      </div>
       <div class="diner-row">
         <div class="stepper">
           <button class="st-btn" :disabled="diners <= 1" @click="subDiners">−</button>
@@ -123,7 +146,7 @@ const discountText = computed(() => discount.value === 0.68 ? '6.8折' : '5.8折
     <!-- 菜品选择（含折扣下拉） -->
     <section class="card">
       <div class="card-head">
-        <span class="card-title" style="margin-bottom:0">🍽️ 选择菜品</span>
+        <span class="card-title" style="margin-bottom:0">选择菜品</span>
         <div class="discount-select-wrap">
           <select v-model.number="discount" class="discount-select">
             <option v-for="o in discountOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
@@ -156,7 +179,7 @@ const discountText = computed(() => discount.value === 0.68 ? '6.8折' : '5.8折
 
     <!-- 饮料选择 -->
     <section class="card">
-      <div class="card-title">🥤 饮料选择</div>
+      <div class="card-title">饮料选择</div>
       <div class="drink-grid">
         <div v-for="d in visibleDrinks" :key="d.key" class="drink-item">
           <div class="drink-info">
@@ -177,25 +200,25 @@ const discountText = computed(() => discount.value === 0.68 ? '6.8折' : '5.8折
     </section>
 
     <!-- 结算按钮 -->
-    <button v-if="!showBill" class="settle-btn" @click="showBill = true">
-      <span class="settle-icon">💰</span>
+    <button v-if="!showBill" class="settle-btn" @click="settle">
+      <!-- <span class="settle-icon">💰</span> -->
       <span class="settle-label">结算</span>
     </button>
 
     <!-- 账单明细 -->
     <section v-if="showBill" class="card bill-card">
       <div class="bill-top">
-        <span class="card-title">📋 账单明细</span>
+        <span class="card-title">账单明细</span>
         <button class="fold-btn" @click="showBill = false">收起 ▲</button>
       </div>
 
       <div class="bill-row">
-        <span class="bl">🫕 锅底费</span>
+        <span class="bl">锅底费</span>
         <span class="bd">{{ diners }}人 × ¥12</span>
         <span class="ba">¥{{ potFee }}</span>
       </div>
       <div class="bill-row">
-        <span class="bl">🥣 小料费</span>
+        <span class="bl">小料费</span>
         <span class="bd">{{ diners }}人 × ¥4</span>
         <span class="ba">¥{{ sauceFee }}</span>
       </div>
@@ -209,7 +232,7 @@ const discountText = computed(() => discount.value === 0.68 ? '6.8折' : '5.8折
           <span class="ba">¥{{ d.count * d.price }}</span>
         </div>
         <div class="bill-row highlight">
-          <span class="bl">🍽️ 菜品费</span>
+          <span class="bl">菜品费</span>
           <span class="bd">¥{{ dishRaw }} × {{ discountText }}</span>
           <span class="ba hi">¥{{ dishFee }}</span>
         </div>
@@ -224,7 +247,7 @@ const discountText = computed(() => discount.value === 0.68 ? '6.8折' : '5.8折
           <span class="ba">¥{{ d.count * d.price }}</span>
         </div>
         <div class="bill-row highlight">
-          <span class="bl">🥤 饮料费</span>
+          <span class="bl">饮料费</span>
           <span class="bd"></span>
           <span class="ba hi-drink">¥{{ drinkTotal }}</span>
         </div>
@@ -233,7 +256,7 @@ const discountText = computed(() => discount.value === 0.68 ? '6.8折' : '5.8折
       <div class="sep thick" />
 
       <div class="total-row">
-        <span>💰 合计</span>
+        <span>合计</span>
         <span class="total-price">¥{{ total }}</span>
       </div>
     </section>
@@ -243,6 +266,7 @@ const discountText = computed(() => discount.value === 0.68 ? '6.8折' : '5.8折
 <style scoped>
 /* ── 页面 & 主题变量 ───────────────────────── */
 .page {
+  color-scheme: light dark;
   --red: #a01d25;
   --red-light: #faf0d7;
   --red-border: #d4a373;
@@ -339,6 +363,29 @@ const discountText = computed(() => discount.value === 0.68 ? '6.8折' : '5.8折
 }
 
 /* ── 用餐人数 ──────────────────────────────── */
+.reset-btn {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.reset-btn:hover {
+  border-color: var(--red-border);
+  background: var(--red-light);
+  color: var(--text-1);
+}
+
+.reset-btn:focus-visible {
+  outline: 2px solid var(--red-border);
+  outline-offset: 2px;
+}
+
 .diner-row {
   display: flex;
   align-items: center;
